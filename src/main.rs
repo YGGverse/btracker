@@ -40,7 +40,7 @@ async fn main() -> Result<()> {
     } // librqbit impl dependency
     let database = Database::init(&config.database)?;
     let peers = Peers::init(&config.initial_peer)?;
-    let mut preload = Preload::init(
+    let preload = Preload::init(
         config.preload,
         config.preload_max_filecount,
         config.preload_max_filesize,
@@ -261,7 +261,7 @@ async fn main() -> Result<()> {
                                 .delete(librqbit::api::TorrentIdOrHash::Id(id), false)
                                 .await?;
                             // cleanup tmp
-                            preload.clear();
+                            preload.clear()?;
                             if config.debug {
                                 println!("\t\t\tadd `{i}` to index.")
                             }

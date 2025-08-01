@@ -24,8 +24,16 @@ impl Preload {
         })
     }
 
-    pub fn clear(&mut self) {
-        self.directory.clear()
+    pub fn clear(&self) -> Result<()> {
+        for entry in fs::read_dir(&self.directory)? {
+            let e = entry?;
+            if e.file_type()?.is_dir() {
+                fs::remove_dir_all(e)?;
+            } else {
+                fs::remove_file(e)?;
+            }
+        }
+        Ok(())
     }
 
     pub fn directory(&self) -> &PathBuf {
