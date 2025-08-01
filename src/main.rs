@@ -110,7 +110,6 @@ async fn main() -> Result<()> {
                 if config.debug {
                     println!("\t\tIndex `{i}`...")
                 }
-                preload.clear();
                 // run the crawler in single thread for performance reasons,
                 // use `timeout` argument option to skip the dead connections.
                 match time::timeout(
@@ -261,10 +260,12 @@ async fn main() -> Result<()> {
                             session
                                 .delete(librqbit::api::TorrentIdOrHash::Id(id), false)
                                 .await?;
-
+                            // cleanup tmp
+                            preload.clear();
                             if config.debug {
                                 println!("\t\t\tadd `{i}` to index.")
                             }
+                            // skip processed torrent on the next iteration
                             assert!(processed.insert(i))
                         }
                         Ok(_) => panic!(),
