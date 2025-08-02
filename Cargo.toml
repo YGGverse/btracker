@@ -24,5 +24,5 @@ yggtracker-redb = "0.1"
 
 [patch.crates-io]
 # yggtracker-redb = { path = "../yggtracker-redb" }
-yggtracker-redb = { git = "https://github.com/YGGverse/yggtracker-redb.git", rev="94a82fcd96f96a9966810ffc881e73ef610944c4" }
+yggtracker-redb = { git = "https://github.com/YGGverse/yggtracker-redb.git", rev="ca9ebedd790b67caf64c049a26d3f45f8e6529d1" }
 librqbit = { git = "https://github.com/ikatson/rqbit.git", rev="b580a9610ae7c6eaacd305a3905f7e2d3202ca69" }
