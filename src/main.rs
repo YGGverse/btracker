@@ -98,7 +98,7 @@ async fn main() -> Result<()> {
                 // convert to string once
                 let i = i.to_string();
                 // already indexed?
-                if database.torrent(&i)?.is_some() {
+                if database.has_torrent(&i)? {
                     continue;
                 }
                 if config.debug {
