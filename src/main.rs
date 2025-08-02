@@ -247,6 +247,10 @@ async fn main() -> Result<()> {
                                 .delete(librqbit::api::TorrentIdOrHash::Id(id), false)
                                 .await?;
 
+                            // cleanup `output_folder` only if the torrent is resolved
+                            // to prevent extra write operations on the next iteration
+                            preload.clear_output_folder(&i)?;
+
                             if config.debug {
                                 println!("\t\t\tadd `{i}` to index.")
                             }
@@ -260,7 +264,6 @@ async fn main() -> Result<()> {
                         }
                     }
                 }
-                preload.clear_output_folder(&i)?;
             }
         }
         if config.debug {
