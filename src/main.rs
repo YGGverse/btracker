@@ -13,11 +13,7 @@ use librqbit::{
 use peers::Peers;
 use preload::Preload;
 use std::{
-    collections::{HashMap, HashSet},
-    num::NonZero,
-    os::unix::ffi::OsStrExt,
-    path::PathBuf,
-    time::Duration,
+    collections::HashSet, num::NonZero, os::unix::ffi::OsStrExt, path::PathBuf, time::Duration,
 };
 use trackers::Trackers;
 use url::Url;
@@ -143,8 +139,15 @@ async fn main() -> Result<()> {
                 {
                     Ok(r) => match r {
                         Ok(AddTorrentResponse::Added(id, mt)) => {
-                            let mut images: HashMap<PathBuf, usize> = HashMap::with_capacity(
-                                config.preload_max_filecount.unwrap_or_default(),
+                            let mut images: HashSet<PathBuf> = HashSet::with_capacity(
+                                config
+                                    .preload_max_filecount
+                                    .unwrap_or(config.index_capacity),
+                            );
+                            let mut only_files: HashSet<usize> = HashSet::with_capacity(
+                                config
+                                    .preload_max_filecount
+                                    .unwrap_or(config.index_capacity),
                             );
                             mt.wait_until_initialized().await?;
                             let (name, files, is_private, length, bytes) = mt.with_metadata(|m| {
@@ -176,7 +179,8 @@ async fn main() -> Result<()> {
                                         }
                                         continue;
                                     }
-                                    assert!(images.insert(info.relative_filename.clone(), id).is_none())
+                                    assert!(images.insert(info.relative_filename.clone()));
+                                    assert!(only_files.insert(id))
                                 }
                                 let mi = m.info.info();
                                 (
@@ -213,9 +217,7 @@ async fn main() -> Result<()> {
                                     m.torrent_bytes.clone().into()
                                 )
                             })?;
-                            session
-                                .update_only_files(&mt, &images.values().cloned().collect())
-                                .await?;
+                            session.update_only_files(&mt, &only_files).await?;
                             session.unpause(&mt).await?;
                             mt.wait_until_completed().await?;
                             assert!(
@@ -231,12 +233,10 @@ async fn main() -> Result<()> {
                                                     None
                                                 } else {
                                                     let mut b = Vec::with_capacity(images.len());
-                                                    for path in images.keys() {
+                                                    for p in images {
                                                         b.push(Image {
-                                                            bytes: preload.bytes(path)?,
-                                                            path: path
-                                                                .to_string_lossy()
-                                                                .to_string(),
+                                                            bytes: preload.bytes(&p)?,
+                                                            path: p.to_string_lossy().to_string(),
                                                         })
                                                     }
                                                     Some(b)
