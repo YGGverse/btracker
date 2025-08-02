@@ -1,5 +1,5 @@
 use anyhow::{Result, bail};
-use std::path::PathBuf;
+use std::{fs, path::PathBuf};
 
 /// Temporary file storage for `librqbit` preload data
 pub struct Preload {
@@ -25,12 +25,12 @@ impl Preload {
     }
 
     pub fn clear(&self) -> Result<()> {
-        for entry in fs::read_dir(&self.directory)? {
-            let e = entry?;
-            if e.file_type()?.is_dir() {
-                fs::remove_dir_all(e)?;
+        for e in fs::read_dir(&self.directory)? {
+            let p = e?.path();
+            if p.is_dir() {
+                fs::remove_dir_all(p)?;
             } else {
-                fs::remove_file(e)?;
+                fs::remove_file(p)?;
             }
         }
         Ok(())
