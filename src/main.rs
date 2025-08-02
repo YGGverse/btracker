@@ -250,12 +250,11 @@ async fn main() -> Result<()> {
                                     )?
                                     .is_none()
                             );
-                            println!("\t\t\tadd torrent `{i}`");
                             // remove torrent from session as indexed
                             session
                                 .delete(librqbit::api::TorrentIdOrHash::Id(id), false)
                                 .await?;
-                            // cleanup tmp
+                            // cleanup tmp dir
                             preload.clear()?;
                             if config.debug {
                                 println!("\t\t\tadd `{i}` to index.")
