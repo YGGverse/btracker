@@ -246,8 +246,7 @@ async fn main() -> Result<()> {
                             session
                                 .delete(librqbit::api::TorrentIdOrHash::Id(id), false)
                                 .await?;
-                            // cleanup tmp dir
-                            preload.clear_output_folder(&i)?;
+
                             if config.debug {
                                 println!("\t\t\tadd `{i}` to index.")
                             }
@@ -261,6 +260,7 @@ async fn main() -> Result<()> {
                         }
                     }
                 }
+                preload.clear_output_folder(&i)?;
             }
         }
         if config.debug {
