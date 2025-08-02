@@ -214,7 +214,7 @@ async fn main() -> Result<()> {
                                 )
                             })?;
                             session
-                                .update_only_files(&mt, &images.values().collect())
+                                .update_only_files(&mt, &images.values().cloned().collect())
                                 .await?;
                             session.unpause(&mt).await?;
                             mt.wait_until_completed().await?;
