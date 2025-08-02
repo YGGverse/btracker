@@ -128,7 +128,9 @@ async fn main() -> Result<()> {
                                 config.preload_max_filecount.unwrap_or_default(),
                             )),
                             // the folder to preload temporary files (e.g. images for the audio albums)
-                            output_folder: Some(preload.output_folder(&i)?),
+                            output_folder: Some(
+                                preload.output_folder(&i)?.to_string_lossy().to_string(),
+                            ),
                             ..Default::default()
                         }),
                     ),

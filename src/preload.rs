@@ -31,11 +31,14 @@ impl Preload {
         Ok(())
     }
 
-    pub fn output_folder(&self, info_hash: &str) -> Result<String> {
+    /// * create new directory if not exists
+    pub fn output_folder(&self, info_hash: &str) -> Result<PathBuf> {
         let mut p = PathBuf::from(&self.directory);
         p.push(info_hash);
-        fs::create_dir(&p)?;
-        Ok(p.to_string_lossy().to_string())
+        if !p.exists() {
+            fs::create_dir(&p)?
+        }
+        Ok(p)
     }
 
     pub fn root(&self) -> PathBuf {
