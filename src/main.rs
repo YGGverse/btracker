@@ -72,8 +72,6 @@ async fn main() -> Result<()> {
 
     // begin
     println!("Crawler started on {time_init}");
-    let mut processed = HashSet::with_capacity(config.index_capacity);
-
     loop {
         let time_queue = Local::now();
         if config.debug {
@@ -100,7 +98,7 @@ async fn main() -> Result<()> {
                 // convert to string once
                 let i = i.to_string();
                 // already indexed?
-                if processed.contains(&i) {
+                if database.torrent(&i)?.is_some() {
                     continue;
                 }
                 if config.debug {
@@ -163,12 +161,6 @@ async fn main() -> Result<()> {
                                     }
                                     if info.relative_filename.extension().is_none_or(|e|
                                         !matches!(e.as_bytes(), b"png" | b"jpeg" | b"jpg" | b"gif" | b"webp")) {
-                                        if config.debug {
-                                            println!(
-                                                "\t\t\tskip non-image file `{}` for `{i}`.",
-                                                info.relative_filename.to_string_lossy()
-                                            )
-                                        }
                                         continue;
                                     }
                                     if preload.max_filesize.is_some_and(|limit| info.len > limit) {
@@ -259,8 +251,6 @@ async fn main() -> Result<()> {
                             if config.debug {
                                 println!("\t\t\tadd `{i}` to index.")
                             }
-                            // skip processed torrent on the next iteration
-                            assert!(processed.insert(i))
                         }
                         Ok(_) => panic!(),
                         Err(e) => eprintln!("Failed to resolve `{i}`: `{e}`."),
@@ -276,7 +266,7 @@ async fn main() -> Result<()> {
         if config.debug {
             println!(
                 "Queue completed on {time_queue}\n\ttotal: {}\n\ttime: {} s\n\tuptime: {} s\n\tawait {} seconds to continue...",
-                processed.len(),
+                database.torrents_total()?,
                 Local::now()
                     .signed_duration_since(time_queue)
                     .as_seconds_f32(),
