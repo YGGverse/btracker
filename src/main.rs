@@ -161,10 +161,7 @@ async fn main() -> Result<()> {
                                         }
                                         break;
                                     }
-                                    if preload.max_filesize.is_some_and(|limit| {
-                                        let sum :u64 = images.values().sum();
-                                        sum + info.len > limit
-                                    }) {
+                                    if preload.max_filesize.is_some_and(|limit| info.len > limit) {
                                         if config.debug {
                                             println!(
                                                 "\t\t\ttotal files size limit `{i}` reached!"
