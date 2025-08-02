@@ -143,16 +143,13 @@ async fn main() -> Result<()> {
                 {
                     Ok(r) => match r {
                         Ok(AddTorrentResponse::Added(id, mt)) => {
-                            let mut update_only_files: HashSet<usize> = HashSet::with_capacity(
-                                config.preload_max_filecount.unwrap_or_default(),
-                            );
-                            let mut images: HashMap<PathBuf, u64> = HashMap::with_capacity(
+                            let mut images: HashMap<PathBuf, usize> = HashMap::with_capacity(
                                 config.preload_max_filecount.unwrap_or_default(),
                             );
                             mt.wait_until_initialized().await?;
                             let (name, files, is_private, length, bytes) = mt.with_metadata(|m| {
                                 for info in &m.file_infos {
-                                    if preload.max_filecount .is_some_and(|limit| images.len() + 1 > limit) {
+                                    if preload.max_filecount.is_some_and(|limit| images.len() + 1 > limit) {
                                         if config.debug {
                                             println!(
                                                 "\t\t\ttotal files count limit ({}) for `{i}` reached!",
@@ -179,8 +176,7 @@ async fn main() -> Result<()> {
                                         }
                                         continue;
                                     }
-                                    images.insert(info.relative_filename.clone(), info.len);
-                                    assert!(update_only_files.insert(id))
+                                    assert!(images.insert(info.relative_filename.clone(), id).is_none())
                                 }
                                 let mi = m.info.info();
                                 (
@@ -217,7 +213,9 @@ async fn main() -> Result<()> {
                                     m.torrent_bytes.clone().into()
                                 )
                             })?;
-                            session.update_only_files(&mt, &update_only_files).await?;
+                            session
+                                .update_only_files(&mt, &images.values().collect())
+                                .await?;
                             session.unpause(&mt).await?;
                             mt.wait_until_completed().await?;
                             assert!(
