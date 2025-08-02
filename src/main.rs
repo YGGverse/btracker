@@ -161,20 +161,20 @@ async fn main() -> Result<()> {
                                         }
                                         break;
                                     }
-                                    if preload.max_filesize.is_some_and(|limit| info.len > limit) {
-                                        if config.debug {
-                                            println!(
-                                                "\t\t\ttotal files size limit `{i}` reached!"
-                                            )
-                                        }
-                                        break;
-                                    }
                                     if info.relative_filename.extension().is_none_or(|e|
                                         !matches!(e.as_bytes(), b"png" | b"jpeg" | b"jpg" | b"gif" | b"webp")) {
                                         if config.debug {
                                             println!(
                                                 "\t\t\tskip non-image file `{}` for `{i}`.",
                                                 info.relative_filename.to_string_lossy()
+                                            )
+                                        }
+                                        continue;
+                                    }
+                                    if preload.max_filesize.is_some_and(|limit| info.len > limit) {
+                                        if config.debug {
+                                            println!(
+                                                "\t\t\ttotal files size limit `{i}` reached!"
                                             )
                                         }
                                         continue;
