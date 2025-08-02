@@ -24,20 +24,22 @@ impl Preload {
         })
     }
 
-    pub fn clear(&self) -> Result<()> {
-        for e in fs::read_dir(&self.directory)? {
-            let p = e?.path();
-            if p.is_dir() {
-                fs::remove_dir_all(p)?;
-            } else {
-                fs::remove_file(p)?;
-            }
-        }
+    pub fn clear_output_folder(&self, info_hash: &str) -> Result<()> {
+        let mut p = PathBuf::from(&self.directory);
+        p.push(info_hash);
+        fs::remove_dir_all(&p)?;
         Ok(())
     }
 
-    pub fn directory(&self) -> &PathBuf {
-        &self.directory
+    pub fn output_folder(&self, info_hash: &str) -> Result<String> {
+        let mut p = PathBuf::from(&self.directory);
+        p.push(info_hash);
+        fs::create_dir(&p)?;
+        Ok(p.to_string_lossy().to_string())
+    }
+
+    pub fn root(&self) -> PathBuf {
+        self.directory.clone()
     }
 
     pub fn bytes(&self, path: &PathBuf) -> Result<Vec<u8>> {

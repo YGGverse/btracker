@@ -43,7 +43,7 @@ async fn main() -> Result<()> {
     )?;
     let trackers = Trackers::init(&config.tracker)?;
     let session = librqbit::Session::new_with_opts(
-        preload.directory().clone(),
+        preload.root(),
         SessionOptions {
             bind_device_name: config.bind,
             listen: None,
@@ -128,7 +128,7 @@ async fn main() -> Result<()> {
                                 config.preload_max_filecount.unwrap_or_default(),
                             )),
                             // the folder to preload temporary files (e.g. images for the audio albums)
-                            output_folder: Some(preload.directory().to_string_lossy().to_string()),
+                            output_folder: Some(preload.output_folder(&i)?),
                             ..Default::default()
                         }),
                     ),
@@ -247,7 +247,7 @@ async fn main() -> Result<()> {
                                 .delete(librqbit::api::TorrentIdOrHash::Id(id), false)
                                 .await?;
                             // cleanup tmp dir
-                            preload.clear()?;
+                            preload.clear_output_folder(&i)?;
                             if config.debug {
                                 println!("\t\t\tadd `{i}` to index.")
                             }
