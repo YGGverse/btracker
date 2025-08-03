@@ -12,7 +12,7 @@ use librqbit::{
 };
 use libyggtracker_redb::{
     Database,
-    torrent::{Image, Torrent},
+    torrent::{Image, Torrent, image},
 };
 use peers::Peers;
 use preload::Preload;
@@ -191,9 +191,12 @@ async fn main() -> Result<()> {
                                         Some(
                                             images
                                                 .into_iter()
-                                                .map(|p| Image {
-                                                    alt: p.to_str().map(|s| s.to_string()),
-                                                    bytes: preload.bytes(&p).unwrap(),
+                                                .filter_map(|p| {
+                                                    extension(&p).map(|extension| Image {
+                                                        alt: p.to_str().map(|s| s.to_string()),
+                                                        bytes: preload.bytes(&p).unwrap(),
+                                                        extension,
+                                                    })
                                                 })
                                                 .collect(),
                                         )
@@ -256,4 +259,25 @@ fn magnet(infohash: &str, trackers: Option<&HashSet<Url>>) -> String {
         }
     }
     m
+}
+
+use image::Extension;
+fn extension(path: &std::path::Path) -> Option<Extension> {
+    match path.extension() {
+        Some(p) => {
+            let e = p.to_string_lossy().to_lowercase();
+            if e == "png" {
+                Some(Extension::Png)
+            } else if e == "jpeg" || e == "jpg" {
+                Some(Extension::Jpeg)
+            } else if e == "webp" {
+                Some(Extension::Webp)
+            } else if e == "gif" {
+                Some(Extension::Gif)
+            } else {
+                return None;
+            }
+        }
+        None => None,
+    }
 }

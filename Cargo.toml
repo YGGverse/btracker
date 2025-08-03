@@ -23,5 +23,5 @@ libyggtracker-redb = "0.1"
 
 [patch.crates-io]
 librqbit = { git = "https://github.com/ikatson/rqbit.git", rev="b580a9610ae7c6eaacd305a3905f7e2d3202ca69" }
-libyggtracker-redb = { git = "https://github.com/YGGverse/libyggtracker-redb.git", rev="5a9dc9d858e86668f7c10ced5d88f8368090e720" }
+libyggtracker-redb = { git = "https://github.com/YGGverse/libyggtracker-redb.git", rev="c5cc9113e2da0a5be272b0392691d6ab6e037224" }
 # libyggtracker-redb = { path = "../libyggtracker-redb" }
