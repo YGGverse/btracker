@@ -10,15 +10,15 @@ use librqbit::{
     AddTorrent, AddTorrentOptions, AddTorrentResponse, ConnectionOptions, PeerConnectionOptions,
     SessionOptions,
 };
+use libyggtracker_redb::{
+    Database,
+    torrent::{Image, Torrent},
+};
 use peers::Peers;
 use preload::Preload;
 use std::{collections::HashSet, num::NonZero, os::unix::ffi::OsStrExt, time::Duration};
 use trackers::Trackers;
 use url::Url;
-use yggtracker_redb::{
-    Database,
-    torrent::{Image, Torrent},
-};
 
 #[tokio::main]
 async fn main() -> Result<()> {
