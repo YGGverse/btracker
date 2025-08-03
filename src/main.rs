@@ -41,7 +41,7 @@ async fn main() -> Result<()> {
     )?;
     let trackers = Trackers::init(&config.tracker)?;
     let session = librqbit::Session::new_with_opts(
-        preload.root(),
+        preload.root().clone(),
         SessionOptions {
             bind_device_name: config.bind,
             listen: None,

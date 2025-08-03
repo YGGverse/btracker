@@ -37,8 +37,8 @@ impl Preload {
         Ok(p)
     }
 
-    pub fn root(&self) -> PathBuf {
-        self.root.clone()
+    pub fn root(&self) -> &PathBuf {
+        &self.root
     }
 
     pub fn bytes(&self, relative: &PathBuf) -> Result<Vec<u8>> {
