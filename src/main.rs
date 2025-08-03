@@ -12,14 +12,12 @@ use librqbit::{
 };
 use peers::Peers;
 use preload::Preload;
-use std::{
-    collections::HashSet, num::NonZero, os::unix::ffi::OsStrExt, path::PathBuf, time::Duration,
-};
+use std::{collections::HashSet, num::NonZero, os::unix::ffi::OsStrExt, time::Duration};
 use trackers::Trackers;
 use url::Url;
 use yggtracker_redb::{
     Database,
-    torrent::{Torrent, meta::*},
+    torrent::{Image, Torrent},
 };
 
 #[tokio::main]
@@ -139,20 +137,20 @@ async fn main() -> Result<()> {
                 {
                     Ok(r) => match r {
                         Ok(AddTorrentResponse::Added(id, mt)) => {
-                            let mut images: HashSet<PathBuf> = HashSet::with_capacity(
+                            let mut only_files = HashSet::with_capacity(
                                 config
                                     .preload_max_filecount
                                     .unwrap_or(config.index_capacity),
                             );
-                            let mut only_files: HashSet<usize> = HashSet::with_capacity(
+                            let mut images = Vec::with_capacity(
                                 config
                                     .preload_max_filecount
                                     .unwrap_or(config.index_capacity),
                             );
                             mt.wait_until_initialized().await?;
-                            let (name, files, is_private, length, bytes) = mt.with_metadata(|m| {
+                            let bytes = mt.with_metadata(|m| {
                                 for info in &m.file_infos {
-                                    if preload.max_filecount.is_some_and(|limit| images.len() + 1 > limit) {
+                                    if preload.max_filecount.is_some_and(|limit| only_files.len() + 1 > limit) {
                                         if config.debug {
                                             println!(
                                                 "\t\t\ttotal files count limit ({}) for `{i}` reached!",
@@ -173,77 +171,37 @@ async fn main() -> Result<()> {
                                         }
                                         continue;
                                     }
-                                    assert!(images.insert(info.relative_filename.clone()));
-                                    assert!(only_files.insert(id))
+                                    assert!(only_files.insert(id));
+                                    images.push(info.relative_filename.clone());
                                 }
-                                let mi = m.info.info();
-                                (
-                                    mi.name.as_ref().map(|s| s.to_string()),
-                                    mi.files.as_ref().map(|f| {
-                                        let mut b = Vec::with_capacity(f.len());
-                                        let mut i = f.iter();
-                                        for f in i.by_ref() {
-                                            b.push(File {
-                                                path: String::from_utf8(
-                                                    f.path
-                                                        .iter()
-                                                        .enumerate()
-                                                        .flat_map(|(n, b)| {
-                                                            if n == 0 {
-                                                                b.0.to_vec()
-                                                            } else {
-                                                                let mut p = vec![b'/'];
-                                                                p.extend(b.0.to_vec());
-                                                                p
-                                                            }
-                                                        })
-                                                        .collect(),
-                                                )
-                                                .ok(),
-                                                length: f.length,
-                                            });
-                                        }
-                                        b.sort_by(|a, b| a.path.cmp(&b.path)); // @TODO optional
-                                        b
-                                    }),
-                                    mi.private,
-                                    mi.length,
-                                    m.torrent_bytes.clone().into()
-                                )
+                                m.info_bytes.to_vec()
                             })?;
                             session.update_only_files(&mt, &only_files).await?;
                             session.unpause(&mt).await?;
                             mt.wait_until_completed().await?;
-                            assert!(
-                                database
-                                    .set_torrent(
-                                        &i,
-                                        Torrent {
-                                            bytes,
-                                            meta: Meta {
-                                                comment: None, // @TODO
-                                                files,
-                                                images: if images.is_empty() {
-                                                    None
-                                                } else {
-                                                    let mut b = Vec::with_capacity(images.len());
-                                                    for p in images {
-                                                        b.push(Image {
-                                                            bytes: preload.bytes(&p)?,
-                                                            path: p.to_string_lossy().to_string(),
-                                                        })
-                                                    }
-                                                    Some(b)
-                                                },
-                                                is_private,
-                                                name,
-                                                length,
-                                                time: chrono::Utc::now(),
-                                            },
-                                        },
-                                    )?
-                                    .is_none()
-                            );
+
+                            // persist torrent data resolved
+                            database.set_torrent(
+                                &i,
+                                Torrent {
+                                    bytes,
+                                    images: if images.is_empty() {
+                                        None
+                                    } else {
+                                        Some(
+                                            images
+                                                .into_iter()
+                                                .map(|i| Image {
+                                                    alt: i.to_str().map(|p| p.to_string()),
+                                                    bytes: preload.bytes(&i).unwrap(),
+                                                })
+                                                .collect(),
+                                        )
+                                    },
+                                    time: chrono::Utc::now(),
+                                },
+                            )?;
+
                             // remove torrent from session as indexed
                             session
                                 .delete(librqbit::api::TorrentIdOrHash::Id(id), false)
@@ -254,7 +212,7 @@ async fn main() -> Result<()> {
                             preload.clear_output_folder(&i)?;
 
                             if config.debug {
-                                println!("\t\t\tadd `{i}` to index.")
+                                println!("\t\t\ttorrent data successfully resolved.")
                             }
                         }
                         Ok(_) => panic!(),
@@ -270,8 +228,7 @@ async fn main() -> Result<()> {
         }
         if config.debug {
             println!(
-                "Queue completed on {time_queue}\n\ttotal: {}\n\ttime: {} s\n\tuptime: {} s\n\tawait {} seconds to continue...",
-                database.torrents_total()?,
+                "Queue completed on {time_queue}\n\ttime: {} s\n\tuptime: {} s\n\tawait {} seconds to continue...",
                 Local::now()
                     .signed_duration_since(time_queue)
                     .as_seconds_f32(),
