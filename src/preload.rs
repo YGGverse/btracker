@@ -25,12 +25,12 @@ impl Preload {
     }
 
     pub fn clear_output_folder(&self, info_hash: &str) -> Result<()> {
-        Ok(fs::remove_dir_all(&self.path(&PathBuf::from(info_hash))?)?)
+        Ok(fs::remove_dir_all(&self.path(&info_hash.into())?)?)
     }
 
     /// * create new directory if not exists
     pub fn output_folder(&self, info_hash: &str) -> Result<PathBuf> {
-        let p = self.path(&PathBuf::from(info_hash))?;
+        let p = self.path(&info_hash.into())?;
         if !p.exists() {
             fs::create_dir(&p)?
         }
