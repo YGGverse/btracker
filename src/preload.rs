@@ -48,7 +48,7 @@ impl Preload {
     fn path(&self, relative: &PathBuf) -> Result<PathBuf> {
         let mut p = PathBuf::from(&self.root);
         p.push(relative);
-        if p.canonicalize()?.starts_with(&self.root) {
+        if !p.canonicalize()?.starts_with(&self.root) {
             bail!(
                 "Unexpected absolute path resolved for `{}`!",
                 p.to_string_lossy()
