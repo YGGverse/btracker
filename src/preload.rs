@@ -25,12 +25,27 @@ impl Preload {
     }
 
     pub fn clear_output_folder(&self, info_hash: &str) -> Result<()> {
-        Ok(fs::remove_dir_all(&self.path(&info_hash.into())?)?)
+        if !is_info_hash(info_hash) {
+            bail!("Invalid info-hash `{info_hash}`")
+        }
+        let mut p = PathBuf::from(&self.root);
+        p.push(info_hash);
+        if !p.is_dir() {
+            bail!(
+                "Requested target `{}` is not directory!",
+                p.to_string_lossy()
+            )
+        }
+        Ok(fs::remove_dir_all(&p)?)
     }
 
     /// * create new directory if not exists
     pub fn output_folder(&self, info_hash: &str) -> Result<PathBuf> {
-        let p = self.path(&info_hash.into())?;
+        if !is_info_hash(info_hash) {
+            bail!("Invalid info-hash `{info_hash}`")
+        }
+        let mut p = PathBuf::from(&self.root);
+        p.push(info_hash);
         if !p.exists() {
             fs::create_dir(&p)?
         }
@@ -42,18 +57,20 @@ impl Preload {
     }
 
     pub fn bytes(&self, relative: &PathBuf) -> Result<Vec<u8>> {
-        Ok(std::fs::read(self.path(relative)?)?)
-    }
-
-    fn path(&self, relative: &PathBuf) -> Result<PathBuf> {
         let mut p = PathBuf::from(&self.root);
         p.push(relative);
+        // make sure that given relative path
+        // does not contain relative navigation entities
         if !p.canonicalize()?.starts_with(&self.root) {
             bail!(
                 "Unexpected absolute path resolved for `{}`!",
                 p.to_string_lossy()
             )
         }
-        Ok(p)
+        Ok(std::fs::read(p)?)
     }
+}
+
+fn is_info_hash(value: &str) -> bool {
+    value.len() == 40 && value.chars().all(|c| c.is_ascii_hexdigit())
 }
