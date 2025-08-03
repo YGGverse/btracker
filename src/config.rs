@@ -5,7 +5,7 @@ use std::path::PathBuf;
 #[command(version, about, long_about = None)]
 pub struct Config {
     /// Path to the permanent [redb](https://www.redb.org) database
-    #[arg(long)]
+    #[arg(long, short)]
     pub database: PathBuf,
 
     /// Print debug output
@@ -15,20 +15,16 @@ pub struct Config {
     /// Absolute path(s) or URL(s) to import infohashes from the Aquatic tracker binary API
     ///
     /// * PR#233 feature ([Wiki](https://github.com/YGGverse/aquatic-crawler/wiki/Aquatic))
-    #[arg(long)]
+    #[arg(long, short)]
     pub infohash: Vec<String>,
 
     /// Define custom tracker(s) to preload the `.torrent` files info
-    #[arg(long)]
+    #[arg(long, short)]
     pub tracker: Vec<String>,
 
     /// Define initial peer(s) to preload the `.torrent` files info
     #[arg(long)]
     pub initial_peer: Vec<String>,
-
-    /// Save resolved torrent files to given directory
-    #[arg(long)]
-    pub export_torrents: Option<String>,
 
     /// Appends `--tracker` value to magnets and torrents
     #[arg(long, default_value_t = false)]
@@ -42,15 +38,8 @@ pub struct Config {
     #[arg(long)]
     pub bind: Option<String>,
 
-    /// Bind listener on specified `host:port` (`[host]:port` for IPv6)
-    ///
-    /// * this option is useful only for binding the data exchange service,
-    ///   to restrict the outgoing connections for torrent resolver, use `bind` option instead
-    #[arg(long)]
-    pub listen: Option<String>,
-
     /// Directory path to store temporary preload data
-    #[arg(long)]
+    #[arg(long, short)]
     pub preload: PathBuf,
 
     /// Max size sum of preloaded files per torrent (match `preload_regex`)
