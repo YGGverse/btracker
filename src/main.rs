@@ -191,9 +191,9 @@ async fn main() -> Result<()> {
                                         Some(
                                             images
                                                 .into_iter()
-                                                .map(|i| Image {
-                                                    alt: i.to_str().map(|p| p.to_string()),
-                                                    bytes: preload.bytes(&i).unwrap(),
+                                                .map(|p| Image {
+                                                    alt: p.to_str().map(|s| s.to_string()),
+                                                    bytes: preload.bytes(&p).unwrap(),
                                                 })
                                                 .collect(),
                                         )
