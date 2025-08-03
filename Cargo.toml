@@ -20,9 +20,9 @@ tokio = { version = "1.45", features = ["full"] }
 tracing-subscriber = "0.3"
 url = "2.5"
 urlencoding = "2.1"
-yggtracker-redb = "0.1"
+libyggtracker-redb = "0.1"
 
 [patch.crates-io]
 librqbit = { git = "https://github.com/ikatson/rqbit.git", rev="b580a9610ae7c6eaacd305a3905f7e2d3202ca69" }
-yggtracker-redb = { git = "https://github.com/yggverse/yggtracker-redb.git", rev="9910e0b157591f2ba064aa53bd2720c247485243" }
-# yggtracker-redb = { path = "../yggtracker-redb" }
+libyggtracker-redb = { git = "https://github.com/YGGverse/libyggtracker-redb.git", rev="5a9dc9d858e86668f7c10ced5d88f8368090e720" }
+# libyggtracker-redb = { path = "../libyggtracker-redb" }
