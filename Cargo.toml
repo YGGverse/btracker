@@ -4,24 +4,16 @@ version = "0.1.0"
 edition = "2024"
 license = "MIT"
 readme = "README.md"
-description = "Crawler daemon for the yggtracker-redb index, based on the librqbit API"
-keywords = ["aquatic", "librqbit", "yggtracker", "crawler", "bittorrent"]
+description = "BitTorrent aggregation web-server, based on the Rocket framework and aquatic-crawler FS"
+keywords = ["yggtracker", "bittorrent", "server", "aggregator", "catalog"]
 categories = ["network-programming"]
 repository = "https://github.com/YGGverse/yggtrackerd"
 # homepage = "https://yggverse.github.io"
 
 [dependencies]
-anyhow = "1.0"
-chrono = "0.4.41"
 clap = { version = "4.5", features = ["derive"] }
-librqbit = {version = "9.0.0-beta.1", features = ["disable-upload"] }
-tokio = { version = "1.45", features = ["full"] }
-tracing-subscriber = "0.3"
+rocket = "0.5"
+librqbit-core = "5.0"
+chrono = "0.4.41"
 url = "2.5"
 urlencoding = "2.1"
-libyggtracker-redb = "0.1"
-
-[patch.crates-io]
-librqbit = { git = "https://github.com/ikatson/rqbit.git", rev="b580a9610ae7c6eaacd305a3905f7e2d3202ca69" }
-libyggtracker-redb = { git = "https://github.com/YGGverse/libyggtracker-redb.git", rev="e567777ec172a8bf011483c1f49bf1d444543753" }
-# libyggtracker-redb = { path = "../libyggtracker-redb" }

@@ -4,7 +4,7 @@
 [![Dependencies](https://deps.rs/repo/github/YGGverse/yggtrackerd/status.svg)](https://deps.rs/repo/github/YGGverse/yggtrackerd)
 [![crates.io](https://img.shields.io/crates/v/yggtrackerd.svg)](https://crates.io/crates/yggtrackerd)
 
-Crawler daemon for the yggtracker-redb index, based on the librqbit API
+BitTorrent aggregation web-server, based on the [Rocket](https://rocket.rs) framework and [aquatic-crawler](https://github.com/YGGverse/aquatic-crawler) FS
 
 ## Install
 
@@ -22,6 +22,7 @@ yggtrackerd --infohash /path/to/info-hash-ipv6.bin\
             --database /path/to/index.redb\
             --preload  /path/to/directory
 ```
+* append `RUST_LOG=debug` for detailed information output
 
 ### Options
 
