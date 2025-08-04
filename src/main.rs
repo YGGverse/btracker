@@ -47,6 +47,11 @@ fn rocket() -> _ {
     );
     let storage = Storage::init(config.storage, config.limit, config.capacity).unwrap(); // @TODO handle
     rocket::build()
+        .configure(rocket::Config {
+            port: config.port,
+            address: config.address,
+            ..rocket::Config::debug_default()
+        })
         .manage(feed)
         .manage(storage)
         .mount("/", routes![index, rss])

@@ -1,5 +1,8 @@
 use clap::Parser;
-use std::path::PathBuf;
+use std::{
+    net::{IpAddr, Ipv4Addr},
+    path::PathBuf,
+};
 use url::Url;
 
 #[derive(Parser, Debug)]
@@ -32,4 +35,12 @@ pub struct Config {
     /// Appends following tracker(s) to the magnet links
     #[arg(long)]
     pub tracker: Option<Vec<Url>>,
+
+    /// Bind server on given host
+    #[arg(long, short, default_value_t = IpAddr::V4(Ipv4Addr::LOCALHOST))]
+    pub address: IpAddr,
+
+    /// Bind server on given port
+    #[arg(long, short, default_value_t = 8000)]
+    pub port: u16,
 }
