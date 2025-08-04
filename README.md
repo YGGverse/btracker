@@ -15,12 +15,7 @@ BitTorrent aggregation web-server, based on the [Rocket](https://rocket.rs) fram
 ## Usage
 
 ``` bash
-yggtrackerd --infohash /path/to/info-hash-ipv6.bin\
-            --infohash /path/to/another-source.bin\
-            --tracker  udp://host1:port\
-            --tracker  udp://host2:port\
-            --database /path/to/index.redb\
-            --preload  /path/to/directory
+yggtrackerd --storage /path/to/aquatic-crawler/preload
 ```
 * append `RUST_LOG=debug` for detailed information output
 
