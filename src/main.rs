@@ -15,7 +15,6 @@ use rocket::{
     serde::Serialize,
 };
 use rocket_dyn_templates::{Template, context};
-use std::collections::HashSet;
 use storage::{Order, Sort, Storage, Torrent};
 use url::Url;
 
@@ -27,7 +26,8 @@ pub struct Meta {
     pub format_time: String,
     pub stats: Option<Url>,
     pub title: String,
-    pub trackers: Option<HashSet<Url>>,
+    /// * use vector to keep the order from the arguments list
+    pub trackers: Option<Vec<Url>>,
 }
 
 #[get("/?<page>")]
@@ -99,7 +99,7 @@ fn rocket() -> _ {
         config.title.clone(),
         config.description.clone(),
         config.link.clone(),
-        config.tracker.clone().map(|u| u.into_iter().collect()),
+        config.tracker.clone(),
     );
     let storage = Storage::init(config.storage, config.list_limit, config.capacity).unwrap(); // @TODO handle
     rocket::build()
@@ -117,7 +117,7 @@ fn rocket() -> _ {
             format_time: config.format_time,
             stats: config.stats,
             title: config.title,
-            trackers: config.tracker.map(|u| u.into_iter().collect()),
+            trackers: config.tracker,
         })
         .mount("/", routes![index, rss])
 }

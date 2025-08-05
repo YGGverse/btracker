@@ -1,5 +1,4 @@
 use crate::format;
-use std::collections::HashSet;
 use url::Url;
 
 /// Export crawl index to the RSS file
@@ -7,7 +6,7 @@ pub struct Feed {
     description: Option<String>,
     link: Option<String>,
     title: String,
-    trackers: Option<HashSet<Url>>,
+    trackers: Option<Vec<Url>>,
 }
 
 impl Feed {
@@ -15,7 +14,7 @@ impl Feed {
         title: String,
         description: Option<String>,
         link: Option<Url>,
-        trackers: Option<HashSet<Url>>,
+        trackers: Option<Vec<Url>>,
     ) -> Self {
         Self {
             description: description.map(escape),
