@@ -64,12 +64,15 @@
                 margin: 16px auto;
             }
 
-            header a.logo {
+            header > a,
+            header > a:active,
+            header > a:hover,
+            header > a:visited {
                 color: #ccc;
                 font-size: 20px;
             }
 
-            header a.logo > span {
+            header::first-letter {
                 color: #96d9a1;
             }
 
@@ -149,9 +152,7 @@
     </head>
     <body>
         <header>
-            <a class="logo" href="/">
-                <span>YGG</span>tracker
-            </a>
+            <a href="/">{{ meta.title }}</a>
             {% if meta.trackers %}
                 <div>{% for tracker in meta.trackers %}<code>{{ tracker }}</code>{% endfor %}</div>
             {% endif %}
