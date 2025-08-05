@@ -8,7 +8,7 @@ use url::Url;
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 pub struct Config {
-    /// Path to the [aquatic-crawler](https://github.com/YGGverse/aquatic-crawler) file storage
+    /// Path to the [aquatic-crawler](https://github.com/yggverse/aquatic-crawler) file storage
     #[arg(long, short)]
     pub storage: PathBuf,
 

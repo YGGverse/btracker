@@ -1,7 +1,7 @@
 # btracker
 
-![Linux](https://github.com/YGGverse/btracker/actions/workflows/linux.yml/badge.svg)
-[![Dependencies](https://deps.rs/repo/github/YGGverse/btracker/status.svg)](https://deps.rs/repo/github/YGGverse/btracker)
+![Linux](https://github.com/yggverse/btracker/actions/workflows/linux.yml/badge.svg)
+[![Dependencies](https://deps.rs/repo/github/yggverse/btracker/status.svg)](https://deps.rs/repo/github/yggverse/btracker)
 [![crates.io](https://img.shields.io/crates/v/btracker.svg)](https://crates.io/crates/btracker)
 
 βtracker is a BitTorrent aggregator based on the [aquatic-crawler](https://github.com/yggverse/aquatic-crawler) API and [Rocket](https://rocket.rs) web-framework
