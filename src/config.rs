@@ -36,7 +36,7 @@ pub struct Config {
     #[arg(long)]
     pub stats: Option<Url>,
 
-    /// Appends following tracker(s) to the magnet links
+    /// Display following tracker(s) in the header, append also to the magnet links
     #[arg(long)]
     pub tracker: Option<Vec<Url>>,
 

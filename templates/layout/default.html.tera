@@ -73,6 +73,15 @@
                 color: #96d9a1;
             }
 
+            header > div {
+                margin: 16px 0;
+            }
+
+            header > div > code:not(:last-child)::after {
+                content: "|";
+                margin: 0 6px;
+            }
+
             main {
                 margin: 0 auto;
             }
@@ -90,6 +99,9 @@
             <a class="logo" href="/">
                 <span>YGG</span>tracker
             </a>
+            {% if meta.trackers %}
+                <div>{% for tracker in meta.trackers %}<code>{{ tracker }}</code>{% endfor %}</div>
+            {% endif %}
         </header>
         <main>
         {% block content %}{% endblock content %}
