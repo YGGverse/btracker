@@ -86,6 +86,16 @@
                 margin: 0 auto;
             }
 
+            /* pagination */
+            main > a {
+                background: #34384f;
+                border-radius: 3px;
+                float: right;
+                margin-left: 8px;
+                opacity: .96;
+                padding: 8px;
+            }
+
             /* item row */
             main > div {
                 background-color: #34384f;

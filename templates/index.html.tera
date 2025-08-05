@@ -1,22 +1,30 @@
 {% extends "layout/default" %}
 {% block content %}
-{% for row in rows %}
-    <div>
-        <a name="{{ row.torrent.info_hash }}"></a>
-        <h2>{{ row.torrent.name }}</h2>
-        {% if row.torrent.comment %}<p>{{ row.torrent.comment }}</p>{% endif %}
+{% if rows %}
+    {% for row in rows %}
         <div>
-            <ul>
-                <li><span title="Indexed">{{ row.indexed }}</span>{%
-                if row.created %} <span title="Created">({{ row.created }})</span>{% endif %}</li>{%
-                if row.size %}<li><span title="Size">{{ row.size }}</span></li>{% endif %}
-            </ul>
-            <a rel="nofollow" href="{{ row.magnet }}" title="Magnet">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
-                    <path d="M15 12h-4v3h4v-3ZM5 12H1v3h4v-3ZM0 8a8 8 0 1 1 16 0v8h-6V8a2 2 0 1 0-4 0v8H0V8Z"/>
-                </svg>
-            </a>
+            <a name="{{ row.torrent.info_hash }}"></a>
+            <h2>{{ row.torrent.name }}</h2>
+            {% if row.torrent.comment %}<p>{{ row.torrent.comment }}</p>{% endif %}
+            <div>
+                <ul>
+                    <li><span title="Indexed">{{ row.indexed }}</span>{%
+                    if row.created %} <span title="Created">({{ row.created }})</span>{% endif %}</li>{%
+                    if row.size %}<li><span title="Size">{{ row.size }}</span></li>{% endif %}
+                </ul>
+                <a rel="nofollow" href="{{ row.magnet }}" title="Magnet">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M15 12h-4v3h4v-3ZM5 12H1v3h4v-3ZM0 8a8 8 0 1 1 16 0v8h-6V8a2 2 0 1 0-4 0v8H0V8Z"/>
+                    </svg>
+                </a>
+            </div>
         </div>
+    {% endfor %}
+{% else %}
+    <div>
+        Nothing.
     </div>
-{% endfor %}
+{% endif %}
+{% if next %}<a href="{{ next }}">Next</a>{% endif %}
+{% if back %}<a href="{{ back }}">Back</a>{% endif %}
 {% endblock content %}

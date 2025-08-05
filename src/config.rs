@@ -14,7 +14,7 @@ pub struct Config {
 
     /// Default listing limit
     #[arg(long, default_value_t = 50)]
-    pub limit: usize,
+    pub list_limit: usize,
 
     /// Default capacity (estimated torrents in `storage`)
     #[arg(long, default_value_t = 1000)]

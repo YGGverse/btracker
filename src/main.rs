@@ -30,8 +30,12 @@ pub struct Meta {
     pub trackers: Option<HashSet<Url>>,
 }
 
-#[get("/")]
-fn index(storage: &State<Storage>, meta: &State<Meta>) -> Result<Template, Custom<String>> {
+#[get("/?<page>")]
+fn index(
+    page: Option<usize>,
+    storage: &State<Storage>,
+    meta: &State<Meta>,
+) -> Result<Template, Custom<String>> {
     #[derive(Serialize)]
     #[serde(crate = "rocket::serde")]
     struct Row {
@@ -41,25 +45,32 @@ fn index(storage: &State<Storage>, meta: &State<Meta>) -> Result<Template, Custo
         size: String,
         torrent: Torrent,
     }
+    let rows = storage
+        .torrents(
+            Some((Sort::Modified, Order::Asc)),
+            page.map(|p| if p > 0 { p - 1 } else { p } * storage.default_limit),
+            Some(storage.default_limit),
+        )
+        .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?
+        .into_iter()
+        .map(|torrent| Row {
+            created: torrent
+                .creation_date
+                .map(|t| t.format(&meta.format_time).to_string()),
+            indexed: torrent.time.format(&meta.format_time).to_string(),
+            magnet: format::magnet(&torrent.info_hash, meta.trackers.as_ref()),
+            size: format::bytes(torrent.size),
+            torrent,
+        })
+        .collect::<Vec<Row>>();
     Ok(Template::render(
         "index",
         context! {
             meta: meta.inner(),
-            rows: storage
-            .torrents(
-                Some((Sort::Modified, Order::Asc)),
-                Some(storage.default_limit),
-            )
-            .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?
-            .into_iter()
-            .map(|torrent| Row {
-                created: torrent.creation_date.map(|t|t.format(&meta.format_time).to_string()),
-                indexed: torrent.time.format(&meta.format_time).to_string(),
-                magnet: format::magnet(&torrent.info_hash, meta.trackers.as_ref()),
-                size: format::bytes(torrent.size),
-                torrent,
-            })
-            .collect::<Vec<Row>>()
+            back: page.map(|p| uri!(index(if p > 2 { Some(p - 1) } else { None }))),
+            next: if rows.len() < storage.default_limit { None }
+                    else { Some(uri!(index(Some(page.map_or(2, |p| p + 1))))) },
+            rows
         },
     ))
 }
@@ -70,6 +81,7 @@ fn rss(feed: &State<Feed>, storage: &State<Storage>) -> Result<RawXml<String>, C
     for torrent in storage
         .torrents(
             Some((Sort::Modified, Order::Asc)),
+            None,
             Some(storage.default_limit),
         )
         .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?
@@ -89,7 +101,7 @@ fn rocket() -> _ {
         config.link.clone(),
         config.tracker.clone().map(|u| u.into_iter().collect()),
     );
-    let storage = Storage::init(config.storage, config.limit, config.capacity).unwrap(); // @TODO handle
+    let storage = Storage::init(config.storage, config.list_limit, config.capacity).unwrap(); // @TODO handle
     rocket::build()
         .attach(Template::fairing())
         .configure(rocket::Config {

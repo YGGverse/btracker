@@ -74,12 +74,13 @@ impl Storage {
     pub fn torrents(
         &self,
         sort_order: Option<(Sort, Order)>,
+        start: Option<usize>,
         limit: Option<usize>,
     ) -> Result<Vec<Torrent>, String> {
         let f = self.files(sort_order)?;
         let l = limit.unwrap_or(f.len());
         let mut b = Vec::with_capacity(l);
-        for file in f.into_iter().take(l) {
+        for file in f.into_iter().skip(start.unwrap_or_default()).take(l) {
             if file
                 .path()
                 .extension()
