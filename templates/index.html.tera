@@ -1,0 +1,9 @@
+{% extends "layout/default" %}
+{% block content %}
+{% for torrent in torrents %}
+<div>
+    <a name="{{ torrent.info_hash }}"></a>
+    <h2>{{ torrent.name }}</h2>
+</div>
+{% endfor %}
+{% endblock content %}

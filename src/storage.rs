@@ -1,5 +1,6 @@
 use chrono::{DateTime, Utc};
 use librqbit_core::{torrent_metainfo, torrent_metainfo::TorrentMetaV1Owned};
+use rocket::serde::Serialize;
 use std::{
     fs::{self, DirEntry},
     path::PathBuf,
@@ -15,14 +16,18 @@ pub enum Sort {
 pub enum Order {
     #[default]
     Asc,
-    Desc,
+    //Desc,
 }
 
+#[derive(Clone, Debug, Serialize)]
+#[serde(crate = "rocket::serde")]
 pub struct File {
     pub name: Option<String>,
     pub length: u64,
 }
 
+#[derive(Clone, Debug, Serialize)]
+#[serde(crate = "rocket::serde")]
 pub struct Torrent {
     pub announce: Option<String>,
     pub comment: Option<String>,
@@ -171,7 +176,7 @@ impl Storage {
             match sort {
                 Sort::Modified => match order {
                     Order::Asc => b.sort_by(|a, b| a.0.cmp(&b.0)),
-                    Order::Desc => b.sort_by(|a, b| b.0.cmp(&a.0)),
+                    //Order::Desc => b.sort_by(|a, b| b.0.cmp(&a.0)),
                 },
             }
         }

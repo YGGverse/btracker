@@ -32,6 +32,10 @@ pub struct Config {
     #[arg(long)]
     pub link: Option<Url>,
 
+    /// Optional reference to the [Aquatic](https://github.com/greatest-ape/aquatic) stats page
+    #[arg(long)]
+    pub stats: Option<Url>,
+
     /// Appends following tracker(s) to the magnet links
     #[arg(long)]
     pub tracker: Option<Vec<Url>>,

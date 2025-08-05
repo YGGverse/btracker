@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8" />
+        <title>{{ meta.title }}</title>
+        {% if meta.description %}
+            <meta name="description" content="{{ meta.description }}" />
+        {% endif %}
+        <style>
+            * {
+                border: 0;
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+                outline: none;
+            }
+            :focus,
+            :focus-within,
+            :focus-visible,
+            :active,
+            :target,
+            :hover {
+                opacity: 1;
+                transition: opacity .2s ease-in-out;
+            }
+
+            body {
+                background: #282b3c;
+                color: #ccc;
+                font-family: Sans-serif;
+                font-size: 13px;
+            }
+
+            a,
+            a:visited,
+            a:active {
+                color: #96d9a1;
+                text-decoration: none;
+                opacity: .9;
+            }
+
+            h1, h2, h3, h4, h5 {
+                display: inline-block;
+                font-weight: normal;
+            }
+
+            h1 {
+                font-size: 16px;
+            }
+
+            h2 {
+                color: #ccc;
+                font-size: 14px;
+            }
+
+            body > * {
+                position: relative;
+                overflow: hidden;
+                max-width: 748px;
+            }
+
+            header, footer {
+                text-align: center;
+                margin: 16px auto;
+            }
+
+            header a.logo {
+                color: #ccc;
+                font-size: 20px;
+            }
+
+            header a.logo > span {
+                color: #96d9a1;
+            }
+
+            main {
+                margin: 0 auto;
+            }
+
+            main > div {
+                background-color: #34384f;
+                border-radius: 3px;
+                margin: 8px 0;
+                padding: 24px;
+            }
+        </style>
+    </head>
+    <body>
+        <header>
+            <a class="logo" href="/">
+                <span>YGG</span>tracker
+            </a>
+        </header>
+        <main>
+        {% block content %}{% endblock content %}
+        </main>
+        <footer>
+            {% if meta.stats %}<a href="{meta.stats}">Stats</a> |{% endif %}
+            <a href="/rss">RSS</a> |
+            <a href="https://github.com/YGGverse/YGGtracker">GitHub</a>
+        </footer>
+    </body>
+</html>
