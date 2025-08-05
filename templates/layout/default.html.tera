@@ -168,7 +168,6 @@
         {% block content %}{% endblock content %}
         </main>
         <footer>
-            {% if meta.stats %}<a href="{meta.stats}">Stats</a> |{% endif %}
             <a href="/rss">RSS</a> |
             <a href="https://github.com/YGGverse/YGGtracker">GitHub</a>
         </footer>

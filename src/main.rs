@@ -24,7 +24,6 @@ pub struct Meta {
     pub canonical: Option<Url>,
     pub description: Option<String>,
     pub format_time: String,
-    pub stats: Option<Url>,
     pub title: String,
     /// * use vector to keep the order from the arguments list
     pub trackers: Option<Vec<Url>>,
@@ -123,7 +122,6 @@ fn rocket() -> _ {
             canonical: config.link,
             description: config.description,
             format_time: config.format_time,
-            stats: config.stats,
             title: config.title,
             trackers: config.tracker,
         })
