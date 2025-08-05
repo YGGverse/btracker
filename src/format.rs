@@ -15,3 +15,18 @@ pub fn bytes(value: u64) -> String {
         format!("{:.2} GB", f / GB)
     }
 }
+
+pub fn magnet(info_hash: &str, trackers: Option<&std::collections::HashSet<url::Url>>) -> String {
+    let mut b = if info_hash.len() == 40 {
+        format!("magnet:?xt=urn:btih:{info_hash}")
+    } else {
+        todo!("info-hash v2 is not supported by librqbit")
+    };
+    if let Some(t) = trackers {
+        for tracker in t {
+            b.push_str("&tr=");
+            b.push_str(&urlencoding::encode(tracker.as_str()))
+        }
+    }
+    b
+}

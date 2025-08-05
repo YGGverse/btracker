@@ -7,8 +7,7 @@ pub struct Feed {
     description: Option<String>,
     link: Option<String>,
     title: String,
-    /// Valid, parsed from Url, ready-to-use address string donor
-    trackers: Option<HashSet<String>>,
+    trackers: Option<HashSet<Url>>,
 }
 
 impl Feed {
@@ -22,7 +21,7 @@ impl Feed {
             description: description.map(escape),
             link: link.map(|s| escape(s.to_string())),
             title: escape(title),
-            trackers: trackers.map(|v| v.into_iter().map(|u| u.to_string()).collect()),
+            trackers,
         }
     }
 
@@ -70,7 +69,7 @@ impl Feed {
                     .map(|b| b.to_string())
                     .unwrap_or("?".into()) // @TODO
             ),
-            escape(self.magnet(&torrent.info_hash))
+            escape(format::magnet(&torrent.info_hash, self.trackers.as_ref()))
         ));
 
         if let Some(d) = item_description(torrent.length, torrent.files) {
@@ -90,23 +89,6 @@ impl Feed {
     pub fn commit(&self, mut buffer: String) -> String {
         buffer.push_str("</channel></rss>");
         buffer
-    }
-
-    // Tools
-
-    fn magnet(&self, info_hash: &str) -> String {
-        let mut b = if info_hash.len() == 40 {
-            format!("magnet:?xt=urn:btih:{info_hash}")
-        } else {
-            todo!("info-hash v2 is not supported by librqbit")
-        };
-        if let Some(ref trackers) = self.trackers {
-            for tracker in trackers {
-                b.push_str("&tr=");
-                b.push_str(&urlencoding::encode(tracker))
-            }
-        }
-        b
     }
 }
 

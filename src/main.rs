@@ -15,7 +15,8 @@ use rocket::{
     serde::Serialize,
 };
 use rocket_dyn_templates::{Template, context};
-use storage::{Order, Sort, Storage};
+use std::collections::HashSet;
+use storage::{Order, Sort, Storage, Torrent};
 use url::Url;
 
 #[derive(Clone, Debug, Serialize)]
@@ -25,21 +26,33 @@ pub struct Meta {
     pub description: Option<String>,
     pub stats: Option<Url>,
     pub title: String,
-    pub trackers: Option<Vec<Url>>,
+    pub trackers: Option<HashSet<Url>>,
 }
 
 #[get("/")]
 fn index(storage: &State<Storage>, meta: &State<Meta>) -> Result<Template, Custom<String>> {
+    #[derive(Serialize)]
+    #[serde(crate = "rocket::serde")]
+    struct Row {
+        torrent: Torrent,
+        magnet: String,
+    }
     Ok(Template::render(
         "index",
         context! {
             meta: meta.inner(),
-            torrents: storage
+            rows: storage
             .torrents(
                 Some((Sort::Modified, Order::Asc)),
                 Some(storage.default_limit),
             )
             .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?
+            .into_iter()
+            .map(|torrent| Row {
+                magnet: format::magnet(&torrent.info_hash, meta.trackers.as_ref()),
+                torrent,
+            })
+            .collect::<Vec<Row>>()
         },
     ))
 }
@@ -67,7 +80,7 @@ fn rocket() -> _ {
         config.title.clone(),
         config.description.clone(),
         config.link.clone(),
-        config.tracker.clone().map(|u| u.into_iter().collect()), // make sure it's unique
+        config.tracker.clone().map(|u| u.into_iter().collect()),
     );
     let storage = Storage::init(config.storage, config.limit, config.capacity).unwrap(); // @TODO handle
     rocket::build()
@@ -84,7 +97,7 @@ fn rocket() -> _ {
             description: config.description,
             stats: config.stats,
             title: config.title,
-            trackers: config.tracker,
+            trackers: config.tracker.map(|u| u.into_iter().collect()),
         })
         .mount("/", routes![index, rss])
 }

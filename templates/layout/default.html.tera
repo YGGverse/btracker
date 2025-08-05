@@ -86,11 +86,21 @@
                 margin: 0 auto;
             }
 
+            /* item row */
             main > div {
                 background-color: #34384f;
                 border-radius: 3px;
                 margin: 8px 0;
                 padding: 24px;
+            }
+
+            /* controls */
+            main > div > div {
+                float: right;
+            }
+
+            main > div > div > a> svg {
+                vertical-align: middle;
             }
         </style>
     </head>
