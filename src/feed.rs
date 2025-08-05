@@ -71,7 +71,7 @@ impl Feed {
             escape(format::magnet(&torrent.info_hash, self.trackers.as_ref()))
         ));
 
-        if let Some(d) = item_description(torrent.length, torrent.files) {
+        if let Some(d) = item_description(torrent.size, torrent.files) {
             buffer.push_str("<description>");
             buffer.push_str(&escape(d));
             buffer.push_str("</description>")
@@ -100,14 +100,9 @@ fn escape(subject: String) -> String {
         .replace("'", "&apos;")
 }
 
-fn item_description(size: Option<u64>, list: Option<Vec<crate::storage::File>>) -> Option<String> {
-    if size.is_none() && list.is_none() {
-        return None;
-    }
+fn item_description(size: u64, list: Option<Vec<crate::storage::File>>) -> Option<String> {
     let mut b = Vec::with_capacity(list.as_ref().map(|l| l.len()).unwrap_or_default() + 1);
-    if let Some(s) = size {
-        b.push(format::bytes(s))
-    }
+    b.push(format::bytes(size));
     if let Some(files) = list {
         for file in files {
             b.push(format!(
