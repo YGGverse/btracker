@@ -40,6 +40,7 @@ pub struct Torrent {
     pub name: Option<String>,
     pub publisher_url: Option<String>,
     pub publisher: Option<String>,
+    pub size: u64,
     /// File (modified)
     pub time: DateTime<Utc>,
 }
@@ -90,6 +91,7 @@ impl Storage {
                 &fs::read(file.path()).map_err(|e| e.to_string())?,
             )
             .map_err(|e| e.to_string())?;
+
             b.push(Torrent {
                 info_hash: i.info_hash.as_string(),
                 announce: i.announce.map(|a| a.to_string()),
@@ -98,6 +100,12 @@ impl Storage {
                 creation_date: i
                     .creation_date
                     .map(|t| DateTime::from_timestamp_nanos(t as i64)),
+                size: i.info.length.unwrap_or_default()
+                    + i.info
+                        .files
+                        .as_ref()
+                        .map(|files| files.iter().map(|f| f.length).sum::<u64>())
+                        .unwrap_or_default(),
                 files: i.info.files.map(|files| {
                     let limit = 1000; // @TODO
                     let mut b = Vec::with_capacity(files.len());

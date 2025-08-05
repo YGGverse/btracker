@@ -94,12 +94,45 @@
                 padding: 24px;
             }
 
-            /* controls */
-            main > div > div {
-                float: right;
+            /* description */
+            main > div > p {
+                margin: 8px 0;
             }
 
-            main > div > div > a> svg {
+            /* meta, controls */
+            main > div > div {
+                border-top: 1px #4f536a solid;
+                margin-top: 16px;
+                overflow: hidden;
+                padding-top: 16px;
+            }
+
+            main > div > div > ul {
+                list-style: none;
+            }
+
+            main > div > div > ul > li {
+                cursor: default;
+                float: left;
+            }
+
+            main > div > div > ul > li > span {
+                color: white;
+                font-size: smaller;
+                opacity: 0.7;
+            }
+
+            main > div > div > ul > li > span:hover {
+                opacity: 1;
+            }
+
+            main > div > div > ul > li:not(:last-child)::after {
+                content: "•";
+                margin: 0 6px;
+            }
+
+            main > div > div > a > svg {
+                float: right;
                 vertical-align: middle;
             }
         </style>

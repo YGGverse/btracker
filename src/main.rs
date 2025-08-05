@@ -24,6 +24,7 @@ use url::Url;
 pub struct Meta {
     pub canonical: Option<Url>,
     pub description: Option<String>,
+    pub format_time: String,
     pub stats: Option<Url>,
     pub title: String,
     pub trackers: Option<HashSet<Url>>,
@@ -34,8 +35,11 @@ fn index(storage: &State<Storage>, meta: &State<Meta>) -> Result<Template, Custo
     #[derive(Serialize)]
     #[serde(crate = "rocket::serde")]
     struct Row {
-        torrent: Torrent,
+        created: Option<String>,
+        indexed: String,
         magnet: String,
+        size: String,
+        torrent: Torrent,
     }
     Ok(Template::render(
         "index",
@@ -49,7 +53,10 @@ fn index(storage: &State<Storage>, meta: &State<Meta>) -> Result<Template, Custo
             .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?
             .into_iter()
             .map(|torrent| Row {
+                created: torrent.creation_date.map(|t|t.format(&meta.format_time).to_string()),
+                indexed: torrent.time.format(&meta.format_time).to_string(),
                 magnet: format::magnet(&torrent.info_hash, meta.trackers.as_ref()),
+                size: format::bytes(torrent.size),
                 torrent,
             })
             .collect::<Vec<Row>>()
@@ -95,6 +102,7 @@ fn rocket() -> _ {
         .manage(Meta {
             canonical: config.link,
             description: config.description,
+            format_time: config.format_time,
             stats: config.stats,
             title: config.title,
             trackers: config.tracker.map(|u| u.into_iter().collect()),

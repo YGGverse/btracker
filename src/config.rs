@@ -40,6 +40,12 @@ pub struct Config {
     #[arg(long)]
     pub tracker: Option<Vec<Url>>,
 
+    /// Format timestamps (on the web view)
+    ///
+    /// * tip: escape with `%%d/%%m/%%Y %%H:%%M` in the CLI/bash argument
+    #[arg(long, short, default_value_t = String::from("%d/%m/%Y %H:%M"))]
+    pub format_time: String,
+
     /// Bind server on given host
     #[arg(long, short, default_value_t = IpAddr::V4(Ipv4Addr::LOCALHOST))]
     pub address: IpAddr,
