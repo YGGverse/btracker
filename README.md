@@ -42,3 +42,8 @@ btracker --storage /path/to/aquatic-crawler/preload
 ``` bash
 btracker --help
 ```
+
+## Live
+
+* `http://[302:68d0:f0d5:b88d::fdb]` - [Yggdrasil](https://yggdrasil-network.github.io/) only peers BitTorrent tracker
+    * [http://tracker.ygg](http://tracker.ygg/) - [Alfis DNS](https://github.com/Revertron/Alfis) alias
