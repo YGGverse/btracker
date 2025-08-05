@@ -6,6 +6,23 @@
 
 BitTorrent aggregation web-server, based on the [Rocket](https://rocket.rs) framework and [aquatic-crawler](https://github.com/YGGverse/aquatic-crawler) FS
 
+## Roadmap
+
+* [x] RSS feeds
+* [ ] Torrents listing
+    * [x] Basic metainfo
+    * [x] Pagination
+    * [ ] Search filter
+    * [ ] Results order
+* [ ] Torrent details page
+    * [ ] File list
+    * [ ] Background image (from the files asset)
+* [ ] Common features
+    * [ ] Scrape peers/seeds
+    * [ ] Download
+        * [x] Magnet
+        * [ ] Torrent
+
 ## Install
 
 1. `git clone https://github.com/YGGverse/yggtrackerd.git && cd yggtrackerd`
