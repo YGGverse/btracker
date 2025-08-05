@@ -8,9 +8,10 @@
             {% if row.torrent.comment %}<p>{{ row.torrent.comment }}</p>{% endif %}
             <div>
                 <ul>
-                    <li><span title="Indexed">{{ row.indexed }}</span>{%
-                    if row.created %} <span title="Created">({{ row.created }})</span>{% endif %}</li>{%
-                    if row.size %}<li><span title="Size">{{ row.size }}</span></li>{% endif %}
+                    <li><span title="Indexed">{{ row.indexed }}</span></li>
+                    {% if row.created %}<li><span title="Created">({{ row.created }})</span></li>{% endif %}
+                    {% if row.size %}<li><span title="Size">{{ row.size }}</span></li>{% endif %}
+                    <li><span title="Files">{{ row.files }}</span></li>
                 </ul>
                 <a rel="nofollow" href="{{ row.magnet }}" title="Magnet">
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">

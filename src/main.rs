@@ -43,6 +43,7 @@ fn index(
         indexed: String,
         magnet: String,
         size: String,
+        files: String,
         torrent: Torrent,
     }
     let (total, torrents) = storage
@@ -68,6 +69,10 @@ fn index(
                     indexed: torrent.time.format(&meta.format_time).to_string(),
                     magnet: format::magnet(&torrent.info_hash, meta.trackers.as_ref()),
                     size: format::bytes(torrent.size),
+                    files: torrent.files.as_ref().map_or("1 file".into(), |f| {
+                        let l = f.len();
+                        format!("{l} {}", l.plurify(&["file", "files", "files"]))
+                    }),
                     torrent,
                 })
                 .collect::<Vec<Row>>(),
