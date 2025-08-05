@@ -107,12 +107,12 @@
                 padding: 24px;
             }
 
-            /* description */
+            /* item row description */
             main > div > p {
                 margin: 8px 0;
             }
 
-            /* meta, controls */
+            /* item row meta, controls */
             main > div > div {
                 border-top: 1px #4f536a solid;
                 margin-top: 16px;
@@ -147,6 +147,13 @@
             main > div > div > a > svg {
                 float: right;
                 vertical-align: middle;
+            }
+
+            /* pagination info */
+            main > span {
+                display: inline-block;
+                float: right;
+                padding: 8px;
             }
         </style>
     </head>

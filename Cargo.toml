@@ -18,3 +18,4 @@ chrono = { version = "0.4.41", features = ["serde"] }
 url = { version = "2.5", features = ["serde"] }
 urlencoding = "2.1"
 rocket_dyn_templates = { version = "0.2", features = ["tera"] }
+plurify = "0.2"

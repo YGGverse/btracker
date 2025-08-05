@@ -76,9 +76,10 @@ impl Storage {
         sort_order: Option<(Sort, Order)>,
         start: Option<usize>,
         limit: Option<usize>,
-    ) -> Result<Vec<Torrent>, String> {
+    ) -> Result<(usize, Vec<Torrent>), String> {
         let f = self.files(sort_order)?;
-        let l = limit.unwrap_or(f.len());
+        let t = f.len();
+        let l = limit.unwrap_or(t);
         let mut b = Vec::with_capacity(l);
         for file in f.into_iter().skip(start.unwrap_or_default()).take(l) {
             if file
@@ -163,7 +164,7 @@ impl Storage {
                     .into(),
             })
         }
-        Ok(b)
+        Ok((t, b))
     }
 
     // Helpers

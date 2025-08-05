@@ -36,6 +36,7 @@ fn index(
     storage: &State<Storage>,
     meta: &State<Meta>,
 ) -> Result<Template, Custom<String>> {
+    use plurify::Plurify;
     #[derive(Serialize)]
     #[serde(crate = "rocket::serde")]
     struct Row {
@@ -45,32 +46,38 @@ fn index(
         size: String,
         torrent: Torrent,
     }
-    let rows = storage
+    let (total, torrents) = storage
         .torrents(
             Some((Sort::Modified, Order::Asc)),
             page.map(|p| if p > 0 { p - 1 } else { p } * storage.default_limit),
             Some(storage.default_limit),
         )
-        .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?
-        .into_iter()
-        .map(|torrent| Row {
-            created: torrent
-                .creation_date
-                .map(|t| t.format(&meta.format_time).to_string()),
-            indexed: torrent.time.format(&meta.format_time).to_string(),
-            magnet: format::magnet(&torrent.info_hash, meta.trackers.as_ref()),
-            size: format::bytes(torrent.size),
-            torrent,
-        })
-        .collect::<Vec<Row>>();
+        .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
     Ok(Template::render(
         "index",
         context! {
             meta: meta.inner(),
             back: page.map(|p| uri!(index(if p > 2 { Some(p - 1) } else { None }))),
-            next: if rows.len() < storage.default_limit { None }
+            next: if page.unwrap_or(1) * storage.default_limit >= total { None }
                     else { Some(uri!(index(Some(page.map_or(2, |p| p + 1))))) },
-            rows
+            rows: torrents
+                .into_iter()
+                .map(|torrent| Row {
+                    created: torrent
+                        .creation_date
+                        .map(|t| t.format(&meta.format_time).to_string()),
+                    indexed: torrent.time.format(&meta.format_time).to_string(),
+                    magnet: format::magnet(&torrent.info_hash, meta.trackers.as_ref()),
+                    size: format::bytes(torrent.size),
+                    torrent,
+                })
+                .collect::<Vec<Row>>(),
+            pagination_totals: format!(
+                "Page {} / {} ({total} {} total)",
+                page.unwrap_or(1),
+                (total as f64 / storage.default_limit as f64).ceil(),
+                total.plurify(&["torrent", "torrents", "torrents"])
+            )
         },
     ))
 }
@@ -85,6 +92,7 @@ fn rss(feed: &State<Feed>, storage: &State<Storage>) -> Result<RawXml<String>, C
             Some(storage.default_limit),
         )
         .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?
+        .1
     {
         feed.push(&mut b, torrent)
     }

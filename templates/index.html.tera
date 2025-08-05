@@ -27,4 +27,5 @@
 {% endif %}
 {% if next %}<a href="{{ next }}">Next</a>{% endif %}
 {% if back %}<a href="{{ back }}">Back</a>{% endif %}
+<span>{{ pagination_totals }}</span>
 {% endblock content %}
