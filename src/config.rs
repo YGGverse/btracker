@@ -21,7 +21,7 @@ pub struct Config {
     pub capacity: usize,
 
     /// Server name
-    #[arg(long, default_value_t = String::from("YGGtracker"))]
+    #[arg(long, default_value_t = String::from("βtracker"))]
     pub title: String,
 
     /// Server description

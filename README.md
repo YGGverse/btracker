@@ -1,10 +1,10 @@
-# yggtrackerd
+# btracker
 
-![Linux](https://github.com/YGGverse/yggtrackerd/actions/workflows/linux.yml/badge.svg)
-[![Dependencies](https://deps.rs/repo/github/YGGverse/yggtrackerd/status.svg)](https://deps.rs/repo/github/YGGverse/yggtrackerd)
-[![crates.io](https://img.shields.io/crates/v/yggtrackerd.svg)](https://crates.io/crates/yggtrackerd)
+![Linux](https://github.com/YGGverse/btracker/actions/workflows/linux.yml/badge.svg)
+[![Dependencies](https://deps.rs/repo/github/YGGverse/btracker/status.svg)](https://deps.rs/repo/github/YGGverse/btracker)
+[![crates.io](https://img.shields.io/crates/v/btracker.svg)](https://crates.io/crates/btracker)
 
-BitTorrent aggregation web-server, based on the [Rocket](https://rocket.rs) framework and [aquatic-crawler](https://github.com/YGGverse/aquatic-crawler) FS
+βtracker is a BitTorrent aggregator based on the [aquatic-crawler](https://github.com/yggverse/aquatic-crawler) API and [Rocket](https://rocket.rs) web-framework
 
 ## Roadmap
 
@@ -15,7 +15,7 @@ BitTorrent aggregation web-server, based on the [Rocket](https://rocket.rs) fram
     * [ ] Search filter
     * [ ] Results order
 * [ ] Torrent details page
-    * [ ] File list
+    * [ ] Files list
     * [ ] Background image (from the files asset)
 * [ ] Common features
     * [ ] Scrape peers/seeds
@@ -25,19 +25,19 @@ BitTorrent aggregation web-server, based on the [Rocket](https://rocket.rs) fram
 
 ## Install
 
-1. `git clone https://github.com/YGGverse/yggtrackerd.git && cd yggtrackerd`
+1. `git clone https://github.com/yggverse/btracker.git && cd btracker`
 2. `cargo build --release`
-3. `sudo install target/release/yggtrackerd /usr/local/bin/yggtrackerd`
+3. `sudo install target/release/btracker /usr/local/bin/btracker`
 
 ## Usage
 
 ``` bash
-yggtrackerd --storage /path/to/aquatic-crawler/preload
+btracker --storage /path/to/aquatic-crawler/preload
 ```
 * append `RUST_LOG=debug` for detailed information output
 
 ### Options
 
 ``` bash
-yggtrackerd --help
+btracker --help
 ```

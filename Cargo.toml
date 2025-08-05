@@ -1,13 +1,13 @@
 [package]
-name = "yggtrackerd"
+name = "btracker"
 version = "0.1.0"
 edition = "2024"
 license = "MIT"
 readme = "README.md"
-description = "BitTorrent aggregation web-server, based on the Rocket framework and aquatic-crawler FS"
-keywords = ["yggtracker", "bittorrent", "server", "aggregator", "catalog"]
+description = "βtracker is a BitTorrent aggregator based on the aquatic-crawler API and Rocket web-framework"
+keywords = ["bittorrent", "aquatic", "aquatic-crawler", "librqbit", "rocket"]
 categories = ["network-programming"]
-repository = "https://github.com/YGGverse/yggtrackerd"
+repository = "https://github.com/yggverse/btracker"
 # homepage = "https://yggverse.github.io"
 
 [dependencies]
