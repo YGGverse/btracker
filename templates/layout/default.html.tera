@@ -6,7 +6,7 @@
         {% if meta.description %}
             <meta name="description" content="{{ meta.description }}" />
         {% endif %}
-        <link rel="stylesheet" type="text/css" href="/theme/default.css?v=1" />
+        <link rel="stylesheet" type="text/css" href="/theme/default.css?v={{ meta.version }}" />
     </head>
     <body>
         <header>
@@ -20,7 +20,7 @@
         </main>
         <footer>
             <a href="/rss">RSS</a> |
-            <a href="https://github.com/yggverse/btracker" title="{% if meta.version %}v{{ meta.version }}{% endif %}">GitHub</a>
+            <a href="https://github.com/yggverse/btracker" title="v{{ meta.version }}">GitHub</a>
         </footer>
     </body>
 </html>
