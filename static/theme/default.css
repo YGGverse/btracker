@@ -145,21 +145,21 @@ main > div > div > ul > li:not(:last-child)::after {
 }
 
 main > div > div > ul > li > span.leechers {
-    background-image: url('leechers.svg');
+    background-image: url('default/leechers.svg');
     background-position: left center;
     background-repeat: no-repeat;
     padding-left: 16px;
 }
 
 main > div > div > ul > li > span.peers {
-    background-image: url('peers.svg');
+    background-image: url('default/peers.svg');
     background-position: left center;
     background-repeat: no-repeat;
     padding-left: 16px;
 }
 
 main > div > div > ul > li > span.seeders {
-    background-image: url('seeders.svg');
+    background-image: url('default/seeders.svg');
     background-position: left center;
     background-repeat: no-repeat;
     padding-left: 16px;
@@ -179,7 +179,7 @@ main > div > div > div > a {
 }
 
 main > div > div > div > a.magnet {
-    background-image: url('magnet.svg');
+    background-image: url('default/magnet.svg');
 }
 
 /* pagination info */
