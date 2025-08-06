@@ -16,7 +16,7 @@ pub enum Sort {
 pub enum Order {
     #[default]
     Asc,
-    //Desc,
+    Desc,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -186,7 +186,7 @@ impl Storage {
             match sort {
                 Sort::Modified => match order {
                     Order::Asc => b.sort_by(|a, b| a.0.cmp(&b.0)),
-                    //Order::Desc => b.sort_by(|a, b| b.0.cmp(&a.0)),
+                    Order::Desc => b.sort_by(|a, b| b.0.cmp(&a.0)),
                 },
             }
         }

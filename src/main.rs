@@ -48,7 +48,7 @@ fn index(
     }
     let (total, torrents) = storage
         .torrents(
-            Some((Sort::Modified, Order::Asc)),
+            Some((Sort::Modified, Order::Desc)),
             page.map(|p| if p > 0 { p - 1 } else { p } * storage.default_limit),
             Some(storage.default_limit),
         )
@@ -91,7 +91,7 @@ fn rss(feed: &State<Feed>, storage: &State<Storage>) -> Result<RawXml<String>, C
     let mut b = feed.transaction(1024); // @TODO
     for torrent in storage
         .torrents(
-            Some((Sort::Modified, Order::Asc)),
+            Some((Sort::Modified, Order::Desc)),
             None,
             Some(storage.default_limit),
         )
