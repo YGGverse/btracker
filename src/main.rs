@@ -120,7 +120,7 @@ fn rocket() -> _ {
         .configure(rocket::Config {
             port: config.port,
             address: config.host,
-            ..rocket::Config::debug_default()
+            ..rocket::Config::default()
         })
         .manage(feed)
         .manage(storage)
