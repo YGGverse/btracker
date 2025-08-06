@@ -27,6 +27,7 @@ pub struct Meta {
     pub title: String,
     /// * use vector to keep the order from the arguments list
     pub trackers: Option<Vec<Url>>,
+    pub version: Option<String>,
 }
 
 #[get("/?<page>")]
@@ -130,6 +131,11 @@ fn rocket() -> _ {
             format_time: config.format_time,
             title: config.title,
             trackers: config.tracker,
+            version: if config.print_version {
+                Some(env!("CARGO_PKG_VERSION").into())
+            } else {
+                None
+            },
         })
         .mount("/", FileServer::from(config.statics))
         .mount("/", routes![index, rss])

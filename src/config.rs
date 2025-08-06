@@ -42,6 +42,10 @@ pub struct Config {
     #[arg(long, default_value_t = 20)]
     pub list_limit: usize,
 
+    /// Show crate version in the catalog (tooltip to the GitHub link)
+    #[arg(long, default_value_t = true)]
+    pub print_version: bool,
+
     /// Default capacity (estimated torrents in the `preload` directory)
     #[arg(long, default_value_t = 1000)]
     pub capacity: usize,
