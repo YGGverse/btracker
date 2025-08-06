@@ -50,9 +50,9 @@ body > * {
     max-width: 748px;
 }
 
-header, footer {
-    text-align: center;
+header {
     margin: 16px auto;
+    text-align: center;
 }
 
 header > a,
@@ -144,4 +144,9 @@ main > div > div > a > svg {
 main > span {
     float: right;
     padding: 8px;
+}
+
+footer {
+    margin: 16px auto 24px;
+    text-align: center;
 }
