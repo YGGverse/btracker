@@ -39,12 +39,20 @@ fn index(
     use plurify::Plurify;
     #[derive(Serialize)]
     #[serde(crate = "rocket::serde")]
+    struct Scrape {
+        leechers: usize,
+        peers: usize,
+        seeders: usize,
+    }
+    #[derive(Serialize)]
+    #[serde(crate = "rocket::serde")]
     struct Row {
         created: Option<String>,
+        files: String,
         indexed: String,
         magnet: String,
+        scrape: Option<Scrape>,
         size: String,
-        files: String,
         torrent: Torrent,
     }
     let (total, torrents) = storage
@@ -69,6 +77,7 @@ fn index(
                         .map(|t| t.format(&meta.format_time).to_string()),
                     indexed: torrent.time.format(&meta.format_time).to_string(),
                     magnet: format::magnet(&torrent.info_hash, meta.trackers.as_ref()),
+                    scrape: None, // @TODO
                     size: format::bytes(torrent.size),
                     files: torrent.files.as_ref().map_or("1 file".into(), |f| {
                         let l = f.len();

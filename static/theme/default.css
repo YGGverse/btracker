@@ -15,9 +15,17 @@
     transition: opacity .2s ease-in-out;
 }
 
+:root {
+    --accent: #96d9a1;
+    --background: #282b3c;
+    --default: #ccc;
+    --item: #34384f;
+}
+
+
 body {
-    background: #282b3c;
-    color: #ccc;
+    background: var(--background);
+    color: var(--default);
     font-family: Sans-serif;
     font-size: 13px;
 }
@@ -25,7 +33,7 @@ body {
 a,
 a:visited,
 a:active {
-    color: #96d9a1;
+    color: var(--accent);
     text-decoration: none;
     opacity: .9;
 }
@@ -40,7 +48,7 @@ h1 {
 }
 
 h2 {
-    color: #ccc;
+    color: var(--default);
     font-size: 14px;
 }
 
@@ -59,12 +67,12 @@ header > a,
 header > a:active,
 header > a:hover,
 header > a:visited {
-    color: #ccc;
+    color: var(--default);
     font-size: 20px;
 }
 
 header::first-letter {
-    color: #96d9a1;
+    color: var(--accent);
 }
 
 header > div {
@@ -82,7 +90,7 @@ main {
 
 /* pagination */
 main > a {
-    background: #34384f;
+    background: var(--item);
     border-radius: 3px;
     float: right;
     margin-left: 8px;
@@ -92,7 +100,7 @@ main > a {
 
 /* item row */
 main > div {
-    background-color: #34384f;
+    background-color: var(--item);
     border-radius: 3px;
     margin: 8px 0;
     padding: 24px;
@@ -122,6 +130,7 @@ main > div > div > ul > li {
 
 main > div > div > ul > li > span {
     color: white;
+    display: inline-block;
     font-size: smaller;
     opacity: 0.7;
 }
@@ -135,9 +144,42 @@ main > div > div > ul > li:not(:last-child)::after {
     margin: 0 6px;
 }
 
-main > div > div > a > svg {
+main > div > div > ul > li > span.leechers {
+    background-image: url('leechers.svg');
+    background-position: left center;
+    background-repeat: no-repeat;
+    padding-left: 16px;
+}
+
+main > div > div > ul > li > span.peers {
+    background-image: url('peers.svg');
+    background-position: left center;
+    background-repeat: no-repeat;
+    padding-left: 16px;
+}
+
+main > div > div > ul > li > span.seeders {
+    background-image: url('seeders.svg');
+    background-position: left center;
+    background-repeat: no-repeat;
+    padding-left: 16px;
+}
+
+/* control actions */
+main > div > div > div {
     float: right;
-    vertical-align: middle;
+}
+
+main > div > div > div > a {
+    background-position: center;
+    background-repeat: no-repeat;
+    display: inline-block;
+    height: 16px;
+    width: 16px;
+}
+
+main > div > div > div > a.magnet {
+    background-image: url('magnet.svg');
 }
 
 /* pagination info */
@@ -147,6 +189,6 @@ main > span {
 }
 
 footer {
-    margin: 16px auto 24px;
+    margin: 16px auto 36px;
     text-align: center;
 }
