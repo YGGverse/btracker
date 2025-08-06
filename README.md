@@ -32,7 +32,7 @@
 ## Usage
 
 ``` bash
-btracker --storage /path/to/aquatic-crawler/preload
+btracker --preload /path/to/aquatic-crawler/dump
 ```
 * append `RUST_LOG=debug` for detailed information output
 * see the project [Wiki](https://github.com/YGGverse/btracker/wiki) for more details (including [systemd](https://github.com/YGGverse/btracker/wiki/Systemd) and [nginx](https://github.com/YGGverse/btracker/wiki/Nginx) examples)
