@@ -106,29 +106,31 @@ fn rss(feed: &State<Feed>, storage: &State<Storage>) -> Result<RawXml<String>, C
 #[launch]
 fn rocket() -> _ {
     use clap::Parser;
+    use rocket::fs::FileServer;
     let config = Config::parse();
     let feed = Feed::init(
         config.title.clone(),
         config.description.clone(),
-        config.link.clone(),
+        config.canonical_url.clone(),
         config.tracker.clone(),
     );
-    let storage = Storage::init(config.storage, config.list_limit, config.capacity).unwrap(); // @TODO handle
+    let storage = Storage::init(config.preload, config.list_limit, config.capacity).unwrap(); // @TODO handle
     rocket::build()
         .attach(Template::fairing())
         .configure(rocket::Config {
             port: config.port,
-            address: config.address,
+            address: config.host,
             ..rocket::Config::debug_default()
         })
         .manage(feed)
         .manage(storage)
         .manage(Meta {
-            canonical: config.link,
+            canonical: config.canonical_url,
             description: config.description,
             format_time: config.format_time,
             title: config.title,
             trackers: config.tracker,
         })
+        .mount("/", FileServer::from(config.statics))
         .mount("/", routes![index, rss])
 }

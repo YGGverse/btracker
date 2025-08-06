@@ -8,17 +8,9 @@ use url::Url;
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 pub struct Config {
-    /// Path to the [aquatic-crawler](https://github.com/yggverse/aquatic-crawler) file storage
-    #[arg(long, short)]
-    pub storage: PathBuf,
-
-    /// Default listing limit
-    #[arg(long, default_value_t = 50)]
-    pub list_limit: usize,
-
-    /// Default capacity (estimated torrents in `storage`)
-    #[arg(long, default_value_t = 1000)]
-    pub capacity: usize,
+    /// Path to the [aquatic-crawler](https://github.com/yggverse/aquatic-crawler) preload files
+    #[arg(long)]
+    pub preload: PathBuf,
 
     /// Server name
     #[arg(long, default_value_t = String::from("βtracker"))]
@@ -30,7 +22,7 @@ pub struct Config {
 
     /// Canonical URL
     #[arg(long)]
-    pub link: Option<Url>,
+    pub canonical_url: Option<Url>,
 
     /// Display following tracker(s) in the header, append also to the magnet links
     #[arg(long)]
@@ -39,12 +31,24 @@ pub struct Config {
     /// Format timestamps (on the web view)
     ///
     /// * tip: escape with `%%d/%%m/%%Y %%H:%%M` in the CLI/bash argument
-    #[arg(long, short, default_value_t = String::from("%d/%m/%Y %H:%M"))]
+    #[arg(long, default_value_t = String::from("%d/%m/%Y %H:%M"))]
     pub format_time: String,
 
+    /// Path to the framework assets
+    #[arg(long, default_value_t = String::from("./static"))]
+    pub statics: String,
+
+    /// Default listing limit
+    #[arg(long, default_value_t = 20)]
+    pub list_limit: usize,
+
+    /// Default capacity (estimated torrents in `storage`)
+    #[arg(long, default_value_t = 1000)]
+    pub capacity: usize,
+
     /// Bind server on given host
-    #[arg(long, short, default_value_t = IpAddr::V4(Ipv4Addr::LOCALHOST))]
-    pub address: IpAddr,
+    #[arg(long, default_value_t = IpAddr::V4(Ipv4Addr::LOCALHOST))]
+    pub host: IpAddr,
 
     /// Bind server on given port
     #[arg(long, short, default_value_t = 8000)]
