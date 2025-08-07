@@ -58,11 +58,13 @@ impl Udp {
 
                 let mut b = [0u8; 1024];
                 let l = route.socket.recv(&mut b)?;
-                let r = scrape_response(&b[..l]);
+                if l < 20 {
+                    todo!()
+                }
 
-                t.leechers += r.leechers;
-                t.peers += r.peers;
-                t.seeders += r.seeders;
+                t.seeders += u32::from_be_bytes(b[8..12].try_into().unwrap());
+                t.leechers += u32::from_be_bytes(b[12..16].try_into().unwrap());
+                t.peers += u32::from_be_bytes(b[16..20].try_into().unwrap());
             }
         }
         Ok(t)
@@ -91,15 +93,4 @@ fn scrape_request(connection_id: u64, transaction_id: u32, info_hashes: &[Id20])
         b.extend_from_slice(&hash.0);
     }
     b
-}
-
-fn scrape_response(response: &[u8]) -> Scrape {
-    if response.len() < 20 {
-        todo!()
-    }
-    Scrape {
-        leechers: u32::from_be_bytes(response[12..16].try_into().unwrap()),
-        seeders: u32::from_be_bytes(response[16..20].try_into().unwrap()),
-        peers: 0, // @TODO
-    }
 }
