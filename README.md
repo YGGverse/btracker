@@ -45,7 +45,7 @@ btracker --preload=/path/to/aquatic-crawler/preload\
   * this argument supports multiple definitions for both the IPv4 and IPv6 protocols, parsed from the URL value
   * take a look at the `--udp` option if you want to customize the default binding for UDP scrapes
 * Define as many `--tracker`(s) as required
-* Append `RUST_LOG=debug` for detailed information output
+* Append `RUST_LOG=debug` for detailed information output; use `--debug` to configure as `rocket::Config::debug_default()`
 * See the project [Wiki](https://github.com/YGGverse/btracker/wiki) for more details (including [systemd](https://github.com/YGGverse/btracker/wiki/Systemd) and [nginx](https://github.com/YGGverse/btracker/wiki/Nginx) examples)
 
 ### Options
