@@ -18,7 +18,9 @@
     * [ ] Files list
     * [ ] Background image (from the files asset)
 * [ ] Common features
-    * [ ] Scrape peers/seeds
+    * [ ] Scrape peers/seeders/leechers
+        * [x] UDP
+        * [ ] TCP
     * [ ] Download
         * [x] Magnet
         * [ ] Torrent

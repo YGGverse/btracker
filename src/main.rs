@@ -4,6 +4,7 @@ extern crate rocket;
 mod config;
 mod feed;
 mod format;
+mod scraper;
 mod storage;
 
 use config::Config;
@@ -15,6 +16,7 @@ use rocket::{
     serde::Serialize,
 };
 use rocket_dyn_templates::{Template, context};
+use scraper::{Scrape, Scraper};
 use storage::{Order, Sort, Storage, Torrent};
 use url::Url;
 
@@ -33,17 +35,11 @@ pub struct Meta {
 #[get("/?<page>")]
 fn index(
     page: Option<usize>,
+    scraper: &State<Scraper>,
     storage: &State<Storage>,
     meta: &State<Meta>,
 ) -> Result<Template, Custom<String>> {
     use plurify::Plurify;
-    #[derive(Serialize)]
-    #[serde(crate = "rocket::serde")]
-    struct Scrape {
-        leechers: usize,
-        peers: usize,
-        seeders: usize,
-    }
     #[derive(Serialize)]
     #[serde(crate = "rocket::serde")]
     struct Row {
@@ -77,7 +73,7 @@ fn index(
                         .map(|t| t.format(&meta.format_time).to_string()),
                     indexed: torrent.time.format(&meta.format_time).to_string(),
                     magnet: format::magnet(&torrent.info_hash, meta.trackers.as_ref()),
-                    scrape: None, // @TODO
+                    scrape: scraper.scrape(torrent.info_hash.as_bytes()),
                     size: format::bytes(torrent.size),
                     files: torrent.files.as_ref().map_or("1 file".into(), |f| {
                         let l = f.len();
@@ -116,7 +112,6 @@ fn rss(feed: &State<Feed>, storage: &State<Storage>) -> Result<RawXml<String>, C
 #[launch]
 fn rocket() -> _ {
     use clap::Parser;
-    use rocket::fs::FileServer;
     let config = Config::parse();
     let feed = Feed::init(
         config.title.clone(),
@@ -124,15 +119,25 @@ fn rocket() -> _ {
         config.canonical_url.clone(),
         config.tracker.clone(),
     );
+    let scraper = Scraper::init(
+        config
+            .scrape_udp_server
+            .map(|s| (config.scrape_udp_client, s)),
+    );
     let storage = Storage::init(config.preload, config.list_limit, config.capacity).unwrap(); // @TODO handle
     rocket::build()
         .attach(Template::fairing())
         .configure(rocket::Config {
             port: config.port,
             address: config.host,
-            ..rocket::Config::default()
+            ..if config.debug {
+                rocket::Config::debug_default()
+            } else {
+                rocket::Config::default()
+            }
         })
         .manage(feed)
+        .manage(scraper)
         .manage(storage)
         .manage(Meta {
             canonical: config.canonical_url,
@@ -142,6 +147,6 @@ fn rocket() -> _ {
             trackers: config.tracker,
             version: env!("CARGO_PKG_VERSION").into(),
         })
-        .mount("/", FileServer::from(config.statics))
+        .mount("/", rocket::fs::FileServer::from(config.statics))
         .mount("/", routes![index, rss])
 }
