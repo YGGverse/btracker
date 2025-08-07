@@ -14,8 +14,8 @@
                             <li><span title="Files">{{ row.files }}</span></li>
                         {% if row.scrape %}
                             <li><span title="Seeders" class="seeders">{{ row.scrape.seeders }}</span></li>
-                            <li><span title="Peers" class="peers">{{ row.scrape.seeders }}</span></li>
-                            <li><span title="Leechers" class="leechers">{{ row.scrape.seeders }}</span></li>
+                            <li><span title="Peers" class="peers">{{ row.scrape.peers }}</span></li>
+                            <li><span title="Leechers" class="leechers">{{ row.scrape.leechers }}</span></li>
                         {% endif %}
                     </ul>
                     <div>
