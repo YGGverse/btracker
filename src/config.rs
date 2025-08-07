@@ -54,18 +54,20 @@ pub struct Config {
     #[arg(long, short, default_value_t = 8000)]
     pub port: u16,
 
-    /// Bind local UDP client for `scrape_udp_server`
+    /// Bind local UDP socket on given address
     ///
-    /// * not in use if the `scrape_udp_server` is not set
+    /// * the default UDP server is not in use without the optional `scrape` argument value
     #[arg(long, default_values_t = vec![
         SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, 0)),
         SocketAddr::V6(SocketAddrV6::new(Ipv6Addr::UNSPECIFIED, 0, 0, 0))
     ])]
-    pub scrape_udp_client: Vec<SocketAddr>,
+    pub udp: Vec<SocketAddr>,
 
-    /// Scrape given UDP trackers to display peers/seeders/leechers info
+    /// Scrape given trackers (to display peers/seeders/leechers info)
+    ///
+    /// * supports multi-stack IPv4/IPv6 trackers
     #[arg(long)]
-    pub scrape_udp_server: Option<Vec<SocketAddr>>,
+    pub scrape: Option<Vec<Url>>,
 
     /// Configure instance in the debug mode
     #[arg(long, default_value_t = false)]

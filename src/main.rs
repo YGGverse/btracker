@@ -121,8 +121,31 @@ fn rocket() -> _ {
     );
     let scraper = Scraper::init(
         config
-            .scrape_udp_server
-            .map(|s| (config.scrape_udp_client, s)),
+            .scrape
+            .map(|u| {
+                u.into_iter()
+                    .map(|url| {
+                        use std::str::FromStr;
+                        if url.scheme() == "tcp" {
+                            todo!("TCP scrape is not implemented")
+                        }
+                        if url.scheme() != "udp" {
+                            todo!("Scheme `{}` is not supported", url.scheme())
+                        }
+                        std::net::SocketAddr::new(
+                            std::net::IpAddr::from_str(
+                                url.host_str()
+                                    .expect("Required valid host value")
+                                    .trim_start_matches('[')
+                                    .trim_end_matches(']'),
+                            )
+                            .unwrap(),
+                            url.port().expect("Required valid port value"),
+                        )
+                    })
+                    .collect()
+            })
+            .map(|a| (config.udp, a)),
     );
     let storage = Storage::init(config.preload, config.list_limit, config.capacity).unwrap(); // @TODO handle
     rocket::build()
