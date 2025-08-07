@@ -39,9 +39,10 @@ btracker --preload=/path/to/aquatic-crawler/preload\
          --tracker=udp://[302:68d0:f0d5:b88d::fdb]:6969\
          --tracker=udp://tracker.ygg:6969
 ```
+* The `--preload` argument specifies the location of the crawled torrents (see [aquatic-crawler](https://github.com/yggverse/aquatic-crawler))
 * The `--scrape` argument is optional and enables statistics for peers, seeders, and leechers
   * it is recommended to use the local address for faster performance
-  * supports multiple providers on both the IPv4 and IPv6 stacks
+  * this argument supports multiple definitions for both the IPv4 and IPv6 protocols, parsed from the URL value
   * take a look at the `--udp` option if you want to customize the default binding for UDP scrapes
 * Define as many `--tracker`(s) as required
 * Append `RUST_LOG=debug` for detailed information output
