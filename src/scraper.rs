@@ -26,6 +26,9 @@ impl Scraper {
 
     pub fn scrape(&self, info_hash: &[u8]) -> Option<Scrape> {
         self.udp.as_ref()?;
+        if info_hash.len() != 40 {
+            todo!("info-hash v2 yet not supported")
+        }
         let mut t = Scrape::default();
         if let Some(ref u) = self.udp {
             let r = u.scrape(info_hash).ok()?; // @TODO handle
