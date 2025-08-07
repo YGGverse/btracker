@@ -20,7 +20,7 @@ pub fn magnet(info_hash: &str, trackers: Option<&Vec<url::Url>>) -> String {
     let mut b = if info_hash.len() == 40 {
         format!("magnet:?xt=urn:btih:{info_hash}")
     } else {
-        todo!("info-hash v2 yet not supported")
+        todo!("info-hash v2 yet not supported") // librqbit_core::hash_id::Id
     };
     if let Some(t) = trackers {
         for tracker in t {

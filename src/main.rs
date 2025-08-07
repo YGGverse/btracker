@@ -73,7 +73,7 @@ fn index(
                         .map(|t| t.format(&meta.format_time).to_string()),
                     indexed: torrent.time.format(&meta.format_time).to_string(),
                     magnet: format::magnet(&torrent.info_hash, meta.trackers.as_ref()),
-                    scrape: scraper.scrape(torrent.info_hash.as_bytes()),
+                    scrape: scraper.scrape(&torrent.info_hash),
                     size: format::bytes(torrent.size),
                     files: torrent.files.as_ref().map_or("1 file".into(), |f| {
                         let l = f.len();

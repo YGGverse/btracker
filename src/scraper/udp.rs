@@ -1,4 +1,5 @@
 use super::Scrape;
+use librqbit_core::hash_id::Id20;
 use rand::Rng;
 use std::{
     io::Error,
@@ -36,7 +37,7 @@ impl Udp {
         )
     }
 
-    pub fn scrape(&self, info_hash: &[u8]) -> Result<Scrape, Error> {
+    pub fn scrape(&self, info_hash: Id20) -> Result<Scrape, Error> {
         let mut t = Scrape::default();
         for route in &self.0 {
             for remote in &route.remote {
@@ -50,7 +51,7 @@ impl Udp {
                     &scrape_request(
                         u64::from_be_bytes(b[8..16].try_into().unwrap()),
                         rand::rng().random::<u32>(),
-                        &[info_hash.to_vec()],
+                        &[info_hash],
                     ),
                     remote,
                 )?;
@@ -76,7 +77,7 @@ fn connection_request() -> Vec<u8> {
     b
 }
 
-fn scrape_request(connection_id: u64, transaction_id: u32, info_hashes: &[Vec<u8>]) -> Vec<u8> {
+fn scrape_request(connection_id: u64, transaction_id: u32, info_hashes: &[Id20]) -> Vec<u8> {
     let mut b = Vec::new();
     b.extend_from_slice(&connection_id.to_be_bytes());
     b.extend_from_slice(&2u32.to_be_bytes());
@@ -87,7 +88,7 @@ fn scrape_request(connection_id: u64, transaction_id: u32, info_hashes: &[Vec<u8
         todo!()
     }
     for hash in info_hashes {
-        b.extend_from_slice(hash);
+        b.extend_from_slice(&hash.0);
     }
     b
 }

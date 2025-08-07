@@ -1,7 +1,7 @@
 mod udp;
 
 use rocket::serde::Serialize;
-use std::net::SocketAddr;
+use std::{net::SocketAddr, str::FromStr};
 use udp::Udp;
 
 #[derive(Serialize, Default)]
@@ -24,14 +24,13 @@ impl Scraper {
         }
     }
 
-    pub fn scrape(&self, info_hash: &[u8]) -> Option<Scrape> {
+    pub fn scrape(&self, info_hash: &str) -> Option<Scrape> {
         self.udp.as_ref()?;
-        if info_hash.len() != 40 {
-            todo!("info-hash v2 yet not supported")
-        }
         let mut t = Scrape::default();
         if let Some(ref u) = self.udp {
-            let r = u.scrape(info_hash).ok()?; // @TODO handle
+            let r = u
+                .scrape(librqbit_core::Id20::from_str(info_hash).ok()?)
+                .ok()?; // @TODO handle
             t.leechers += r.leechers;
             t.peers += r.peers;
             t.seeders += r.seeders;
