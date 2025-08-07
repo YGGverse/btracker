@@ -6,6 +6,8 @@
 
 βtracker is a BitTorrent aggregator based on the [aquatic-crawler](https://github.com/yggverse/aquatic-crawler) API and [Rocket](https://rocket.rs) web-framework
 
+<img width="770" height="502" alt="btracker" src="https://github.com/user-attachments/assets/498d8a23-d590-46a4-a45c-0d094a37a345" />
+
 ## Roadmap
 
 * [x] RSS feeds
