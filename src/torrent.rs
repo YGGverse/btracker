@@ -76,4 +76,47 @@ impl Torrent {
             time,
         })
     }
+
+    // Format getters
+
+    pub fn files(&self) -> String {
+        use plurify::Plurify;
+        self.files.as_ref().map_or("1 file".into(), |f| {
+            let l = f.len();
+            format!("{l} {}", l.plurify(&["file", "files", "files"]))
+        })
+    }
+
+    pub fn size(&self) -> String {
+        const KB: f32 = 1024.0;
+        const MB: f32 = KB * KB;
+        const GB: f32 = MB * KB;
+
+        let f = self.size as f32;
+
+        if f < KB {
+            format!("{} B", self.size)
+        } else if f < MB {
+            format!("{:.2} KB", f / KB)
+        } else if f < GB {
+            format!("{:.2} MB", f / MB)
+        } else {
+            format!("{:.2} GB", f / GB)
+        }
+    }
+
+    pub fn magnet(&self, trackers: Option<&Vec<url::Url>>) -> String {
+        let mut b = if self.info_hash.len() == 40 {
+            format!("magnet:?xt=urn:btih:{}", self.info_hash)
+        } else {
+            todo!("info-hash v2 yet not supported") // librqbit_core::hash_id::Id
+        };
+        if let Some(t) = trackers {
+            for tracker in t {
+                b.push_str("&tr=");
+                b.push_str(&urlencoding::encode(tracker.as_str()))
+            }
+        }
+        b
+    }
 }

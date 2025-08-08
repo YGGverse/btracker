@@ -3,13 +3,13 @@ extern crate rocket;
 
 mod config;
 mod feed;
-mod format;
 mod scraper;
 mod storage;
 mod torrent;
 
 use config::Config;
 use feed::Feed;
+use plurify::Plurify;
 use rocket::{
     State,
     http::Status,
@@ -41,8 +41,6 @@ fn index(
     storage: &State<Storage>,
     meta: &State<Meta>,
 ) -> Result<Template, Custom<String>> {
-    use plurify::Plurify;
-
     #[derive(Serialize)]
     #[serde(crate = "rocket::serde")]
     struct Row {
@@ -81,13 +79,10 @@ fn index(
                             .creation_date
                             .map(|t| t.format(&meta.format_time).to_string()),
                         indexed: torrent.time.format(&meta.format_time).to_string(),
-                        magnet: format::magnet(&torrent.info_hash, meta.trackers.as_ref()),
+                        magnet: torrent.magnet(meta.trackers.as_ref()),
                         scrape: scraper.scrape(&torrent.info_hash),
-                        size: format::bytes(torrent.size),
-                        files: torrent.files.as_ref().map_or("1 file".into(), |f| {
-                            let l = f.len();
-                            format!("{l} {}", l.plurify(&["file", "files", "files"]))
-                        }),
+                        size: torrent.size(),
+                        files: torrent.files(),
                         torrent,
                     }),
                     Err(e) => {

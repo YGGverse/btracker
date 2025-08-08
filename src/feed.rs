@@ -1,4 +1,4 @@
-use crate::{Torrent, format};
+use crate::Torrent;
 use url::Url;
 
 /// Export crawl index to the RSS file
@@ -68,11 +68,11 @@ impl Feed {
                     .map(|b| b.to_string())
                     .unwrap_or("?".into()) // @TODO
             ),
-            escape(format::magnet(&torrent.info_hash, self.trackers.as_ref()))
+            escape(torrent.magnet(self.trackers.as_ref()))
         ));
 
         buffer.push_str("<description>");
-        buffer.push_str(&escape(format::bytes(torrent.size)));
+        buffer.push_str(&format!("{}\n{}", torrent.size(), torrent.files()));
         buffer.push_str("</description>");
 
         buffer.push_str("<pubDate>");
