@@ -4,9 +4,16 @@
 [![Dependencies](https://deps.rs/repo/github/yggverse/btracker/status.svg)](https://deps.rs/repo/github/yggverse/btracker)
 [![crates.io](https://img.shields.io/crates/v/btracker.svg)](https://crates.io/crates/btracker)
 
-βtracker is a BitTorrent aggregator based on the [aquatic-crawler](https://github.com/yggverse/aquatic-crawler) API and [Rocket](https://rocket.rs) web-framework
+βtracker is a social BitTorrent aggregator based on the [aquatic-crawler](https://github.com/yggverse/aquatic-crawler) FS API and [Rocket](https://rocket.rs) web-framework
 
-<img width="770" height="502" alt="btracker" src="https://github.com/user-attachments/assets/498d8a23-d590-46a4-a45c-0d094a37a345" />
+## Screenshots
+
+See the [Wiki](https://github.com/YGGverse/btracker/wiki/Screenshots) page
+
+## Live
+
+* `http://[302:68d0:f0d5:b88d::fdb]` - [Yggdrasil](https://yggdrasil-network.github.io/) only peers BitTorrent tracker
+    * [http://tracker.ygg](http://tracker.ygg/) - [Alfis DNS](https://github.com/Revertron/Alfis) alias
 
 ## Roadmap
 
@@ -55,8 +62,3 @@ btracker --preload=/path/to/aquatic-crawler/preload\
 ``` bash
 btracker --help
 ```
-
-## Live
-
-* `http://[302:68d0:f0d5:b88d::fdb]` - [Yggdrasil](https://yggdrasil-network.github.io/) only peers BitTorrent tracker
-    * [http://tracker.ygg](http://tracker.ygg/) - [Alfis DNS](https://github.com/Revertron/Alfis) alias
