@@ -6,6 +6,7 @@ mod feed;
 mod format;
 mod scraper;
 mod storage;
+mod torrent;
 
 use config::Config;
 use feed::Feed;
@@ -17,7 +18,8 @@ use rocket::{
 };
 use rocket_dyn_templates::{Template, context};
 use scraper::{Scrape, Scraper};
-use storage::{Order, Sort, Storage, Torrent};
+use storage::{Order, Sort, Storage};
+use torrent::Torrent;
 use url::Url;
 
 #[derive(Clone, Debug, Serialize)]
@@ -40,6 +42,7 @@ fn index(
     meta: &State<Meta>,
 ) -> Result<Template, Custom<String>> {
     use plurify::Plurify;
+
     #[derive(Serialize)]
     #[serde(crate = "rocket::serde")]
     struct Row {
@@ -51,13 +54,18 @@ fn index(
         size: String,
         torrent: Torrent,
     }
+
     let (total, torrents) = storage
         .torrents(
             Some((Sort::Modified, Order::Desc)),
             page.map(|p| if p > 0 { p - 1 } else { p } * storage.default_limit),
             Some(storage.default_limit),
         )
-        .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
+        .map_err(|e| {
+            error!("Torrents storage read error: `{e}`");
+            Custom(Status::InternalServerError, E.to_string())
+        })?;
+
     Ok(Template::render(
         "index",
         context! {
@@ -67,19 +75,25 @@ fn index(
                     else { Some(uri!(index(Some(page.map_or(2, |p| p + 1))))) },
             rows: torrents
                 .into_iter()
-                .map(|torrent| Row {
-                    created: torrent
-                        .creation_date
-                        .map(|t| t.format(&meta.format_time).to_string()),
-                    indexed: torrent.time.format(&meta.format_time).to_string(),
-                    magnet: format::magnet(&torrent.info_hash, meta.trackers.as_ref()),
-                    scrape: scraper.scrape(&torrent.info_hash),
-                    size: format::bytes(torrent.size),
-                    files: torrent.files.as_ref().map_or("1 file".into(), |f| {
-                        let l = f.len();
-                        format!("{l} {}", l.plurify(&["file", "files", "files"]))
+                .filter_map(|t| match Torrent::from_storage(&t.bytes, t.time) {
+                    Ok(torrent) => Some(Row {
+                        created: torrent
+                            .creation_date
+                            .map(|t| t.format(&meta.format_time).to_string()),
+                        indexed: torrent.time.format(&meta.format_time).to_string(),
+                        magnet: format::magnet(&torrent.info_hash, meta.trackers.as_ref()),
+                        scrape: scraper.scrape(&torrent.info_hash),
+                        size: format::bytes(torrent.size),
+                        files: torrent.files.as_ref().map_or("1 file".into(), |f| {
+                            let l = f.len();
+                            format!("{l} {}", l.plurify(&["file", "files", "files"]))
+                        }),
+                        torrent,
                     }),
-                    torrent,
+                    Err(e) => {
+                        error!("Torrent storage read error: `{e}`");
+                        None
+                    }
                 })
                 .collect::<Vec<Row>>(),
             pagination_totals: format!(
@@ -95,16 +109,25 @@ fn index(
 #[get("/rss")]
 fn rss(feed: &State<Feed>, storage: &State<Storage>) -> Result<RawXml<String>, Custom<String>> {
     let mut b = feed.transaction(1024); // @TODO
-    for torrent in storage
+    for t in storage
         .torrents(
             Some((Sort::Modified, Order::Desc)),
             None,
             Some(storage.default_limit),
         )
-        .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?
+        .map_err(|e| {
+            error!("Torrent storage read error: `{e}`");
+            Custom(Status::InternalServerError, E.to_string())
+        })?
         .1
     {
-        feed.push(&mut b, torrent)
+        feed.push(
+            &mut b,
+            Torrent::from_storage(&t.bytes, t.time).map_err(|e| {
+                error!("Torrent parse error: `{e}`");
+                Custom(Status::InternalServerError, E.to_string())
+            })?,
+        )
     }
     Ok(RawXml(feed.commit(b)))
 }
@@ -147,7 +170,7 @@ fn rocket() -> _ {
             })
             .map(|a| (config.udp, a)),
     );
-    let storage = Storage::init(config.preload, config.list_limit, config.capacity).unwrap(); // @TODO handle
+    let storage = Storage::init(config.preload, config.list_limit, config.capacity).unwrap();
     rocket::build()
         .attach(Template::fairing())
         .configure(rocket::Config {
@@ -173,3 +196,6 @@ fn rocket() -> _ {
         .mount("/", rocket::fs::FileServer::from(config.statics))
         .mount("/", routes![index, rss])
 }
+
+/// Public placeholder text for the `Status::InternalServerError`
+const E: &str = "Oops!";

@@ -1,4 +1,4 @@
-use crate::format;
+use crate::{Torrent, format};
 use url::Url;
 
 /// Export crawl index to the RSS file
@@ -57,7 +57,7 @@ impl Feed {
     }
 
     /// Append `item` to the feed `channel`
-    pub fn push(&self, buffer: &mut String, torrent: crate::storage::Torrent) {
+    pub fn push(&self, buffer: &mut String, torrent: Torrent) {
         buffer.push_str(&format!(
             "<item><guid>{}</guid><title>{}</title><link>{}</link>",
             &torrent.info_hash,
@@ -71,11 +71,9 @@ impl Feed {
             escape(format::magnet(&torrent.info_hash, self.trackers.as_ref()))
         ));
 
-        if let Some(d) = item_description(torrent.size, torrent.files) {
-            buffer.push_str("<description>");
-            buffer.push_str(&escape(d));
-            buffer.push_str("</description>")
-        }
+        buffer.push_str("<description>");
+        buffer.push_str(&escape(format::bytes(torrent.size)));
+        buffer.push_str("</description>");
 
         buffer.push_str("<pubDate>");
         buffer.push_str(&torrent.time.to_rfc2822());
@@ -98,19 +96,4 @@ fn escape(subject: String) -> String {
         .replace('>', "&gt;")
         .replace('"', "&quot;")
         .replace("'", "&apos;")
-}
-
-fn item_description(size: u64, list: Option<Vec<crate::storage::File>>) -> Option<String> {
-    let mut b = Vec::with_capacity(list.as_ref().map(|l| l.len()).unwrap_or_default() + 1);
-    b.push(format::bytes(size));
-    if let Some(files) = list {
-        for file in files {
-            b.push(format!(
-                "{} ({})",
-                file.name.as_deref().unwrap_or("?"), // @TODO invalid encoding
-                format::bytes(file.length)
-            ))
-        }
-    }
-    Some(b.join("\n"))
 }
