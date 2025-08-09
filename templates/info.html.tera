@@ -19,8 +19,8 @@
             <a rel="nofollow" href="{{ magnet }}" title="Get magnet" class="action magnet"></a>
         </div>
     </div>
-    <div></div>
     {% if files_list %}
+        <div></div>
         <table>
             <thead>
                 <tr>
