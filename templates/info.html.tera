@@ -31,7 +31,13 @@
             <tbody>
                 {% for file in files_list %}
                     <tr>
-                        <td>{{ file.path }}</td>
+                        <td>
+                            {% if file.href %}
+                                <a href="{{ file.href }}">{{ file.path }}</a>
+                            {% else %}
+                                {{ file.path }}
+                            {% endif %}
+                        </td>
                         <td>{{ file.size }}</td>
                     </tr>
                 {% endfor %}

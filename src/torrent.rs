@@ -2,7 +2,7 @@ mod file;
 
 use chrono::{DateTime, Utc};
 use file::File;
-use librqbit_core::{torrent_metainfo, torrent_metainfo::TorrentMetaV1Owned};
+use librqbit_core::torrent_metainfo::{self, TorrentMetaV1Owned};
 use rocket::serde::Serialize;
 
 #[derive(Clone, Debug, Serialize)]
@@ -25,7 +25,7 @@ pub struct Torrent {
 }
 
 impl Torrent {
-    pub fn from_storage(bytes: &[u8], time: DateTime<Utc>) -> Result<Self, String> {
+    pub fn from_public(bytes: &[u8], time: DateTime<Utc>) -> Result<Self, String> {
         let i: TorrentMetaV1Owned =
             torrent_metainfo::torrent_from_bytes(bytes).map_err(|e| e.to_string())?;
         Ok(Torrent {
@@ -84,11 +84,7 @@ impl Torrent {
     }
 
     pub fn magnet(&self, trackers: Option<&Vec<url::Url>>) -> String {
-        let mut b = if self.info_hash.len() == 40 {
-            format!("magnet:?xt=urn:btih:{}", self.info_hash)
-        } else {
-            todo!("info-hash v2 yet not supported") // librqbit_core::hash_id::Id
-        };
+        let mut b = format!("magnet:?xt=urn:btih:{}", self.info_hash);
         if let Some(t) = trackers {
             for tracker in t {
                 b.push_str("&tr=");

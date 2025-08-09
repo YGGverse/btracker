@@ -45,6 +45,7 @@ h1, h2, h3, h4, h5 {
 
 h1, h2 {
     font-size: 14px;
+    padding: 0 8px;
 }
 
 table {
@@ -108,7 +109,7 @@ main > a {
     float: right;
     margin-left: 8px;
     opacity: .96;
-    padding: 8px;
+    padding: 8px 12px;
 }
 
 /* item row */
@@ -129,7 +130,7 @@ main > div > div {
     border-top: 1px solid var(--separator);
     margin-top: 16px;
     overflow: hidden;
-    padding-top: 16px;
+    padding: 16px 8px 0;
 }
 
 main > div > div > ul {

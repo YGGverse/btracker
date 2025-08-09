@@ -8,9 +8,13 @@ use url::Url;
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 pub struct Config {
-    /// Path to the [aquatic-crawler](https://github.com/yggverse/aquatic-crawler) preload files
+    /// Path to the `public` directory
+    ///
+    /// This location must contain:
+    /// * the default or custom `/public/*` files (see the [Rocket deploying specification](https://rocket.rs/guide/v0.5/deploying/))
+    /// * torrents with files collected by the [aquatic-crawler](https://github.com/yggverse/aquatic-crawler)
     #[arg(long)]
-    pub preload: PathBuf,
+    pub public: PathBuf,
 
     /// Server name
     #[arg(long, default_value_t = String::from("βtracker"))]
@@ -34,15 +38,11 @@ pub struct Config {
     #[arg(long, default_value_t = String::from("%d/%m/%Y %H:%M"))]
     pub format_time: String,
 
-    /// Path to the framework assets
-    #[arg(long, default_value_t = String::from("./static"))]
-    pub statics: String,
-
     /// Default listing limit
     #[arg(long, default_value_t = 20)]
     pub list_limit: usize,
 
-    /// Default capacity (estimated torrents in the `preload` directory)
+    /// Default capacity (estimated torrents in the `public` directory)
     #[arg(long, default_value_t = 1000)]
     pub capacity: usize,
 

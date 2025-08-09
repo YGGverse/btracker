@@ -4,14 +4,15 @@ extern crate rocket;
 mod config;
 mod feed;
 mod meta;
+mod public;
 mod scraper;
-mod storage;
 mod torrent;
 
 use config::Config;
 use feed::Feed;
 use meta::Meta;
 use plurify::Plurify;
+use public::{Order, Public, Sort};
 use rocket::{
     State,
     http::Status,
@@ -21,14 +22,13 @@ use rocket::{
 use rocket_dyn_templates::{Template, context};
 use scraper::{Scrape, Scraper};
 use std::str::FromStr;
-use storage::{Order, Sort, Storage};
 use torrent::Torrent;
 
 #[get("/?<page>")]
 fn index(
     page: Option<usize>,
     scraper: &State<Scraper>,
-    storage: &State<Storage>,
+    public: &State<Public>,
     meta: &State<Meta>,
 ) -> Result<Template, Custom<String>> {
     #[derive(Serialize)]
@@ -42,14 +42,14 @@ fn index(
         size: String,
         torrent: Torrent,
     }
-    let (total, torrents) = storage
+    let (total, torrents) = public
         .torrents(
             Some((Sort::Modified, Order::Desc)),
-            page.map(|p| if p > 0 { p - 1 } else { p } * storage.default_limit),
-            Some(storage.default_limit),
+            page.map(|p| if p > 0 { p - 1 } else { p } * public.default_limit),
+            Some(public.default_limit),
         )
         .map_err(|e| {
-            error!("Torrents storage read error: `{e}`");
+            error!("Torrents public storage read error: `{e}`");
             Custom(Status::InternalServerError, E.to_string())
         })?;
     Ok(Template::render(
@@ -57,11 +57,11 @@ fn index(
         context! {
             meta: meta.inner(),
             back: page.map(|p| uri!(index(if p > 2 { Some(p - 1) } else { None }))),
-            next: if page.unwrap_or(1) * storage.default_limit >= total { None }
+            next: if page.unwrap_or(1) * public.default_limit >= total { None }
                     else { Some(uri!(index(Some(page.map_or(2, |p| p + 1))))) },
             rows: torrents
                 .into_iter()
-                .filter_map(|t| match Torrent::from_storage(&t.bytes, t.time) {
+                .filter_map(|t| match Torrent::from_public(&t.bytes, t.time) {
                     Ok(torrent) => Some(R {
                         created: torrent.creation_date.map(|t| t.format(&meta.format_time).to_string()),
                         files: torrent.files(),
@@ -80,7 +80,7 @@ fn index(
             pagination_totals: format!(
                 "Page {} / {} ({total} {} total)",
                 page.unwrap_or(1),
-                (total as f64 / storage.default_limit as f64).ceil(),
+                (total as f64 / public.default_limit as f64).ceil(),
                 total.plurify(&["torrent", "torrents", "torrents"])
             )
         },
@@ -90,11 +90,11 @@ fn index(
 #[get("/<info_hash>")]
 fn info(
     info_hash: &str,
-    storage: &State<Storage>,
+    public: &State<Public>,
     scraper: &State<Scraper>,
     meta: &State<Meta>,
 ) -> Result<Template, Custom<String>> {
-    match storage.torrent(librqbit_core::Id20::from_str(info_hash).map_err(|e| {
+    match public.torrent(librqbit_core::Id20::from_str(info_hash).map_err(|e| {
         warn!("Torrent info-hash parse error: `{e}`");
         Custom(Status::BadRequest, Status::BadRequest.to_string())
     })?) {
@@ -102,10 +102,11 @@ fn info(
             #[derive(Serialize)]
             #[serde(crate = "rocket::serde")]
             struct F {
+                href: Option<String>,
                 path: String,
                 size: String,
             }
-            let torrent = Torrent::from_storage(&t.bytes, t.time).map_err(|e| {
+            let torrent = Torrent::from_public(&t.bytes, t.time).map_err(|e| {
                 error!("Torrent parse error: `{e}`");
                 Custom(Status::InternalServerError, E.to_string())
             })?;
@@ -117,15 +118,19 @@ fn info(
                     files_total: torrent.files(),
                     files_list: torrent.files.as_ref().map(|f| {
                         f.iter()
-                            .map(|f| F {
-                                path: f.path(),
-                                size: f.size(),
+                            .map(|f| {
+                                let p = f.path();
+                                F {
+                                    href: public.href(&torrent.info_hash, &p),
+                                    path: p,
+                                    size: f.size(),
+                                }
                             })
                             .collect::<Vec<F>>()
                     }),
                     indexed: torrent.time.format(&meta.format_time).to_string(),
                     magnet: torrent.magnet(meta.trackers.as_ref()),
-                    scrape: scraper.scrape(info_hash),
+                    scrape: scraper.scrape(&torrent.info_hash),
                     size: torrent.size(),
                     torrent
                 },
@@ -136,23 +141,23 @@ fn info(
 }
 
 #[get("/rss")]
-fn rss(feed: &State<Feed>, storage: &State<Storage>) -> Result<RawXml<String>, Custom<String>> {
+fn rss(feed: &State<Feed>, public: &State<Public>) -> Result<RawXml<String>, Custom<String>> {
     let mut b = feed.transaction(1024); // @TODO
-    for t in storage
+    for t in public
         .torrents(
             Some((Sort::Modified, Order::Desc)),
             None,
-            Some(storage.default_limit),
+            Some(public.default_limit),
         )
         .map_err(|e| {
-            error!("Torrent storage read error: `{e}`");
+            error!("Torrent public storage read error: `{e}`");
             Custom(Status::InternalServerError, E.to_string())
         })?
         .1
     {
         feed.push(
             &mut b,
-            Torrent::from_storage(&t.bytes, t.time).map_err(|e| {
+            Torrent::from_public(&t.bytes, t.time).map_err(|e| {
                 error!("Torrent parse error: `{e}`");
                 Custom(Status::InternalServerError, E.to_string())
             })?,
@@ -199,7 +204,6 @@ fn rocket() -> _ {
             })
             .map(|a| (config.udp, a)),
     );
-    let storage = Storage::init(config.preload, config.list_limit, config.capacity).unwrap();
     rocket::build()
         .attach(Template::fairing())
         .configure(rocket::Config {
@@ -213,7 +217,7 @@ fn rocket() -> _ {
         })
         .manage(feed)
         .manage(scraper)
-        .manage(storage)
+        .manage(Public::init(config.public.clone(), config.list_limit, config.capacity).unwrap())
         .manage(Meta {
             canonical: config.canonical_url,
             description: config.description,
@@ -222,7 +226,7 @@ fn rocket() -> _ {
             trackers: config.tracker,
             version: env!("CARGO_PKG_VERSION").into(),
         })
-        .mount("/", rocket::fs::FileServer::from(config.statics))
+        .mount("/", rocket::fs::FileServer::from(config.public))
         .mount("/", routes![index, info, rss])
 }
 

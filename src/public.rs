@@ -25,13 +25,13 @@ pub struct Torrent {
     pub time: DateTime<Utc>,
 }
 
-pub struct Storage {
+pub struct Public {
     pub default_limit: usize,
     default_capacity: usize,
     root: PathBuf,
 }
 
-impl Storage {
+impl Public {
     // Constructors
 
     pub fn init(
@@ -40,7 +40,7 @@ impl Storage {
         default_capacity: usize,
     ) -> Result<Self, String> {
         if !root.is_dir() {
-            return Err("Storage root is not directory".into());
+            return Err("Public root is not directory".into());
         }
         Ok(Self {
             default_limit,
@@ -86,6 +86,21 @@ impl Storage {
             })
         }
         Ok((t, b))
+    }
+
+    pub fn href(&self, info_hash: &str, path: &str) -> Option<String> {
+        let mut relative = PathBuf::from(info_hash);
+        relative.push(path);
+
+        let mut absolute = PathBuf::from(&self.root);
+        absolute.push(&relative);
+
+        let c = absolute.canonicalize().ok()?;
+        if c.starts_with(&self.root) && c.exists() {
+            Some(relative.to_string_lossy().into())
+        } else {
+            None
+        }
     }
 
     // Helpers

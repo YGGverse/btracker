@@ -43,16 +43,17 @@ See the [Wiki](https://github.com/YGGverse/btracker/wiki/Screenshots) page
 ## Usage
 
 ``` bash
-btracker --preload=/path/to/aquatic-crawler/preload\
+btracker --public=/path/to/aquatic-crawler/preload\
          --scrape=udp://127.0.0.1:6969\
          --tracker=udp://[302:68d0:f0d5:b88d::fdb]:6969\
          --tracker=udp://tracker.ygg:6969
 ```
-* The `--preload` argument specifies the location of the crawled torrents (see [aquatic-crawler](https://github.com/yggverse/aquatic-crawler))
+* The `--public` argument specifies the location of the crawled torrents (see [aquatic-crawler](https://github.com/yggverse/aquatic-crawler))
+    * make sure this location also contains a copy (or symlink) of the `/public` files from this crate (see the [Rocket deploying specification](https://rocket.rs/guide/v0.5/deploying/) for details)
 * The `--scrape` argument is optional and enables statistics for peers, seeders, and leechers
-  * it is recommended to use the local address for faster performance
-  * this argument supports multiple definitions for both the IPv4 and IPv6 protocols, parsed from the URL value
-  * take a look at the `--udp` option if you want to customize the default binding for UDP scrapes
+    * it is recommended to use the local address for faster performance
+    * this argument supports multiple definitions for both the IPv4 and IPv6 protocols, parsed from the URL value
+    * take a look at the `--udp` option if you want to customize the default binding for UDP scrapes
 * Define as many `--tracker`(s) as required
 * Append `RUST_LOG=debug` for detailed information output; use `--debug` to configure as `rocket::Config::debug_default()`
 * See the project [Wiki](https://github.com/YGGverse/btracker/wiki) for more details (including [systemd](https://github.com/YGGverse/btracker/wiki/Systemd) and [nginx](https://github.com/YGGverse/btracker/wiki/Nginx) examples)
