@@ -38,6 +38,14 @@ See the [Wiki](https://github.com/YGGverse/btracker/wiki/Screenshots) page
 
 ## Install
 
+### Stable
+
+``` bash
+cargo install btracker
+```
+
+### Repository
+
 1. `git clone https://github.com/yggverse/btracker.git && cd btracker`
 2. `cargo build --release`
 3. `sudo install target/release/btracker /usr/local/bin/btracker`
@@ -51,7 +59,7 @@ btracker --public=/path/to/aquatic-crawler/preload\
          --tracker=udp://tracker.ygg:6969
 ```
 * The `--public` argument specifies the location of the crawled torrents (see [aquatic-crawler](https://github.com/yggverse/aquatic-crawler))
-    * make sure this location also contains a copy (or symlink) of the `/public` files from this crate (see the [Rocket deploying specification](https://rocket.rs/guide/v0.5/deploying/) for details)
+    * make sure this location also contains a copy (or symlink) of the `/public` files from this crate (see the [Rocket deploying specification](https://rocket.rs/guide/v0.5/deploying/))
 * The `--scrape` argument is optional and enables statistics for peers, seeders, and leechers
     * it is recommended to use the local address for faster performance
     * this argument supports multiple definitions for both the IPv4 and IPv6 protocols, parsed from the URL value
