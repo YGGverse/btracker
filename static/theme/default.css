@@ -20,8 +20,8 @@
     --background: #282b3c;
     --default: #ccc;
     --item: #34384f;
+    --separator: #4f536a;
 }
-
 
 body {
     background: var(--background);
@@ -45,6 +45,24 @@ h1, h2, h3, h4, h5 {
 
 h1, h2 {
     font-size: 14px;
+}
+
+table {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+table td,
+table th {
+    padding: 4px 8px;
+}
+
+table > thead > tr > th {
+    text-align: left;
+}
+
+table > tbody > tr:hover > td {
+    background: var(--background)
 }
 
 body > * {
@@ -108,7 +126,7 @@ main > div > p {
 
 /* item row meta, controls */
 main > div > div {
-    border-top: 1px #4f536a solid;
+    border-top: 1px solid var(--separator);
     margin-top: 16px;
     overflow: hidden;
     padding-top: 16px;

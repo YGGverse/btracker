@@ -3,7 +3,6 @@ extern crate rocket;
 
 mod config;
 mod feed;
-mod format;
 mod meta;
 mod scraper;
 mod storage;
@@ -11,13 +10,13 @@ mod torrent;
 
 use config::Config;
 use feed::Feed;
-use format::Format;
 use meta::Meta;
 use plurify::Plurify;
 use rocket::{
     State,
     http::Status,
     response::{content::RawXml, status::Custom},
+    serde::Serialize,
 };
 use rocket_dyn_templates::{Template, context};
 use scraper::{Scrape, Scraper};
@@ -32,6 +31,17 @@ fn index(
     storage: &State<Storage>,
     meta: &State<Meta>,
 ) -> Result<Template, Custom<String>> {
+    #[derive(Serialize)]
+    #[serde(crate = "rocket::serde")]
+    struct R {
+        created: Option<String>,
+        files: String,
+        indexed: String,
+        magnet: String,
+        scrape: Option<Scrape>,
+        size: String,
+        torrent: Torrent,
+    }
     let (total, torrents) = storage
         .torrents(
             Some((Sort::Modified, Order::Desc)),
@@ -42,7 +52,6 @@ fn index(
             error!("Torrents storage read error: `{e}`");
             Custom(Status::InternalServerError, E.to_string())
         })?;
-
     Ok(Template::render(
         "index",
         context! {
@@ -53,13 +62,21 @@ fn index(
             rows: torrents
                 .into_iter()
                 .filter_map(|t| match Torrent::from_storage(&t.bytes, t.time) {
-                    Ok(torrent) => Some(Format::from_torrent(torrent, scraper, meta)),
+                    Ok(torrent) => Some(R {
+                        created: torrent.creation_date.map(|t| t.format(&meta.format_time).to_string()),
+                        files: torrent.files(),
+                        indexed: torrent.time.format(&meta.format_time).to_string(),
+                        magnet: torrent.magnet(meta.trackers.as_ref()),
+                        scrape: scraper.scrape(&torrent.info_hash),
+                        size: torrent.size(),
+                        torrent
+                    }),
                     Err(e) => {
                         error!("Torrent storage read error: `{e}`");
                         None
                     }
                 })
-                .collect::<Vec<Format>>(),
+                .collect::<Vec<R>>(),
             pagination_totals: format!(
                 "Page {} / {} ({total} {} total)",
                 page.unwrap_or(1),
@@ -81,19 +98,39 @@ fn info(
         warn!("Torrent info-hash parse error: `{e}`");
         Custom(Status::BadRequest, Status::BadRequest.to_string())
     })?) {
-        Some(t) => Ok(Template::render(
-            "info",
-            context! {
-                meta: meta.inner(),
-                torrent: Format::from_torrent(
-                    Torrent::from_storage(&t.bytes, t.time).map_err(|e| {
-                        error!("Torrent parse error: `{e}`");
-                        Custom(Status::InternalServerError, E.to_string())
-                    })?, scraper, meta
-                ),
-                info_hash
-            },
-        )),
+        Some(t) => {
+            #[derive(Serialize)]
+            #[serde(crate = "rocket::serde")]
+            struct F {
+                name: String,
+                size: String,
+            }
+            let torrent = Torrent::from_storage(&t.bytes, t.time).map_err(|e| {
+                error!("Torrent parse error: `{e}`");
+                Custom(Status::InternalServerError, E.to_string())
+            })?;
+            Ok(Template::render(
+                "info",
+                context! {
+                    meta: meta.inner(),
+                    created: torrent.creation_date.map(|t| t.format(&meta.format_time).to_string()),
+                    files_total: torrent.files(),
+                    files_list: torrent.files.as_ref().map(|f| {
+                        f.iter()
+                            .map(|f| F {
+                                name: f.name(),
+                                size: f.size(),
+                            })
+                            .collect::<Vec<F>>()
+                    }),
+                    indexed: torrent.time.format(&meta.format_time).to_string(),
+                    magnet: torrent.magnet(meta.trackers.as_ref()),
+                    scrape: scraper.scrape(info_hash),
+                    size: torrent.size(),
+                    torrent
+                },
+            ))
+        }
         None => Err(Custom(Status::NotFound, E.to_string())),
     }
 }

@@ -1,23 +1,42 @@
 {% extends "layout/default" %}
 {% block content %}
 <div>
-    <h1>{% if torrent.name %}{{ torrent.name }}{% else %}{{ info_hash }}{% endif %}</h1>
+    <h1>{% if torrent.name %}{{ torrent.name }}{% else %}{{ torrent.info_hash }}{% endif %}</h1>
     {% if torrent.comment %}<p>{{ torrent.comment }}</p>{% endif %}
     <div>
         <ul>
-            <li><span title="Indexed">{{ torrent.indexed }}</span></li>
-            {% if torrent.created %}<li><span title="Created">({{ torrent.created }})</span></li>{% endif %}
-            {% if torrent.size %}<li><span title="Size">{{ torrent.size }}</span></li>{% endif %}
-                <li><span title="Files">{{ torrent.files }}</span></li>
-            {% if torrent.scrape %}
-                <li><span title="Seeders" class="seeders">{{ torrent.scrape.seeders }}</span></li>
-                <li><span title="Peers" class="peers">{{ torrent.scrape.peers }}</span></li>
-                <li><span title="Leechers" class="leechers">{{ torrent.scrape.leechers }}</span></li>
+            <li><span title="Indexed">{{ indexed }}</span></li>
+            {% if created %}<li><span title="Created">({{ created }})</span></li>{% endif %}
+            <li><span title="Size">{{ size }}</span></li>
+            <li><span title="Files">{{ files_total }}</span></li>
+            {% if scrape %}
+                <li><span title="Seeders" class="seeders">{{ scrape.seeders }}</span></li>
+                <li><span title="Peers" class="peers">{{ scrape.peers }}</span></li>
+                <li><span title="Leechers" class="leechers">{{ scrape.leechers }}</span></li>
             {% endif %}
         </ul>
         <div>
-            <a rel="nofollow" href="{{ torrent.magnet }}" title="Get magnet" class="action magnet"></a>
+            <a rel="nofollow" href="{{ magnet }}" title="Get magnet" class="action magnet"></a>
         </div>
     </div>
+    <div></div>
+    {% if files_list %}
+        <table>
+            <thead>
+                <tr>
+                    <th>File</th>
+                    <th>Size</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for file in files_list %}
+                    <tr>
+                        <td>{{ file.name }}</td>
+                        <td>{{ file.size }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% endif %}
 </div>
 {% endblock content %}

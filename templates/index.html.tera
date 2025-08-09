@@ -11,7 +11,7 @@
                         <li><span title="Indexed">{{ row.indexed }}</span></li>
                         {% if row.created %}<li><span title="Created">({{ row.created }})</span></li>{% endif %}
                         {% if row.size %}<li><span title="Size">{{ row.size }}</span></li>{% endif %}
-                            <li><span title="Files">{{ row.files }}</span></li>
+                        <li><span title="Files">{{ row.files }}</span></li>
                         {% if row.scrape %}
                             <li><span title="Seeders" class="seeders">{{ row.scrape.seeders }}</span></li>
                             <li><span title="Peers" class="peers">{{ row.scrape.peers }}</span></li>
