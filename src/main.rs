@@ -141,8 +141,13 @@ fn info(
 }
 
 #[get("/rss")]
-fn rss(feed: &State<Feed>, public: &State<Public>) -> Result<RawXml<String>, Custom<String>> {
-    let mut b = feed.transaction(1024); // @TODO
+fn rss(meta: &State<Meta>, public: &State<Public>) -> Result<RawXml<String>, Custom<String>> {
+    let mut f = Feed::new(
+        &meta.title,
+        meta.description.as_deref(),
+        meta.canonical.clone(),
+        1024, // @TODO
+    );
     for t in public
         .torrents(
             Some((Sort::Modified, Order::Desc)),
@@ -155,27 +160,18 @@ fn rss(feed: &State<Feed>, public: &State<Public>) -> Result<RawXml<String>, Cus
         })?
         .1
     {
-        feed.push(
-            &mut b,
-            Torrent::from_public(&t.bytes, t.time).map_err(|e| {
-                error!("Torrent parse error: `{e}`");
-                Custom(Status::InternalServerError, E.to_string())
-            })?,
-        )
+        f.push(Torrent::from_public(&t.bytes, t.time).map_err(|e| {
+            error!("Torrent parse error: `{e}`");
+            Custom(Status::InternalServerError, E.to_string())
+        })?)
     }
-    Ok(RawXml(feed.commit(b)))
+    Ok(RawXml(f.commit()))
 }
 
 #[launch]
 fn rocket() -> _ {
     use clap::Parser;
     let config = Config::parse();
-    let feed = Feed::init(
-        config.title.clone(),
-        config.description.clone(),
-        config.canonical_url.clone(),
-        config.tracker.clone(),
-    );
     let scraper = Scraper::init(
         config
             .scrape
@@ -215,7 +211,6 @@ fn rocket() -> _ {
                 rocket::Config::default()
             }
         })
-        .manage(feed)
         .manage(scraper)
         .manage(Public::init(config.public.clone(), config.list_limit, config.capacity).unwrap())
         .manage(Meta {

@@ -3,94 +3,94 @@ use url::Url;
 
 /// Export crawl index to the RSS file
 pub struct Feed {
-    description: Option<String>,
-    link: Option<String>,
-    title: String,
-    trackers: Option<Vec<Url>>,
+    buffer: String,
+    canonical: Option<Url>,
 }
 
 impl Feed {
-    pub fn init(
-        title: String,
-        description: Option<String>,
-        link: Option<Url>,
-        trackers: Option<Vec<Url>>,
+    pub fn new(
+        title: &str,
+        description: Option<&str>,
+        canonical: Option<Url>,
+        capacity: usize,
     ) -> Self {
-        Self {
-            description: description.map(escape),
-            link: link.map(|s| escape(s.to_string())),
-            title: escape(title),
-            trackers,
-        }
-    }
-
-    pub fn transaction(&self, capacity: usize) -> String {
         let t = chrono::Utc::now().to_rfc2822();
-        let mut b = String::with_capacity(capacity);
+        let mut buffer = String::with_capacity(capacity);
 
-        b.push_str("<?xml version=\"1.0\" encoding=\"UTF-8\"?><rss version=\"2.0\"><channel>");
+        buffer.push_str("<?xml version=\"1.0\" encoding=\"UTF-8\"?><rss version=\"2.0\"><channel>");
 
-        b.push_str("<pubDate>");
-        b.push_str(&t);
-        b.push_str("</pubDate>");
+        buffer.push_str("<pubDate>");
+        buffer.push_str(&t);
+        buffer.push_str("</pubDate>");
 
-        b.push_str("<lastBuildDate>");
-        b.push_str(&t);
-        b.push_str("</lastBuildDate>");
+        buffer.push_str("<lastBuildDate>");
+        buffer.push_str(&t);
+        buffer.push_str("</lastBuildDate>");
 
-        b.push_str("<title>");
-        b.push_str(&self.title);
-        b.push_str("</title>");
+        buffer.push_str("<title>");
+        buffer.push_str(title);
+        buffer.push_str("</title>");
 
-        if let Some(ref description) = self.description {
-            b.push_str("<description>");
-            b.push_str(description);
-            b.push_str("</description>")
+        if let Some(d) = description {
+            buffer.push_str("<description>");
+            buffer.push_str(d);
+            buffer.push_str("</description>")
         }
 
-        if let Some(ref link) = self.link {
-            b.push_str("<link>");
-            b.push_str(link);
-            b.push_str("</link>")
+        if let Some(ref c) = canonical {
+            // @TODO required the RSS specification!
+            buffer.push_str("<link>");
+            buffer.push_str(c.as_str());
+            buffer.push_str("</link>")
         }
-        b
+        Self { buffer, canonical }
     }
 
     /// Append `item` to the feed `channel`
-    pub fn push(&self, buffer: &mut String, torrent: Torrent) {
-        buffer.push_str(&format!(
+    pub fn push(&mut self, torrent: Torrent) {
+        self.buffer.push_str(&format!(
             "<item><guid>{}</guid><title>{}</title><link>{}</link>",
             torrent.info_hash,
             escape(
-                torrent
+                &torrent
                     .name
                     .as_ref()
                     .map(|b| b.to_string())
                     .unwrap_or("?".into()) // @TODO
             ),
-            escape(torrent.magnet(self.trackers.as_ref()))
+            self.canonical
+                .clone()
+                .map(|mut c| escape({
+                    c.set_path(&torrent.info_hash);
+                    c.set_fragment(None);
+                    c.set_query(None);
+                    c.as_str()
+                }))
+                .unwrap_or(escape(&torrent.info_hash)) // should be non-optional absolute URL
+                                                       // by the RSS specification @TODO
         ));
 
-        buffer.push_str("<description>");
-        buffer.push_str(&format!("{}\n{}", torrent.size(), torrent.files()));
-        buffer.push_str("</description>");
+        self.buffer.push_str("<description>");
+        self.buffer
+            .push_str(&format!("{}\n{}", torrent.size(), torrent.files()));
+        self.buffer.push_str("</description>");
 
-        buffer.push_str("<pubDate>");
-        buffer.push_str(&torrent.time.to_rfc2822());
-        buffer.push_str("</pubDate>");
+        self.buffer.push_str("<pubDate>");
+        self.buffer.push_str(&torrent.time.to_rfc2822());
+        self.buffer.push_str("</pubDate>");
 
-        buffer.push_str("</item>")
+        self.buffer.push_str("</item>")
     }
 
     /// Write final bytes
-    pub fn commit(&self, mut buffer: String) -> String {
-        buffer.push_str("</channel></rss>");
-        buffer
+    pub fn commit(mut self) -> String {
+        self.buffer.push_str("</channel></rss>");
+        self.buffer
     }
 }
 
-fn escape(subject: String) -> String {
-    subject
+fn escape(value: &str) -> String {
+    value
         .replace('&', "&amp;")
         .replace('<', "&lt;")
         .replace('>', "&gt;")
