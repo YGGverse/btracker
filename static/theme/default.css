@@ -43,12 +43,7 @@ h1, h2, h3, h4, h5 {
     font-weight: normal;
 }
 
-h1 {
-    font-size: 16px;
-}
-
-h2 {
-    color: var(--default);
+h1, h2 {
     font-size: 14px;
 }
 

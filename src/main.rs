@@ -3,36 +3,27 @@ extern crate rocket;
 
 mod config;
 mod feed;
+mod format;
+mod meta;
 mod scraper;
 mod storage;
 mod torrent;
 
 use config::Config;
 use feed::Feed;
+use format::Format;
+use meta::Meta;
 use plurify::Plurify;
 use rocket::{
     State,
     http::Status,
     response::{content::RawXml, status::Custom},
-    serde::Serialize,
 };
 use rocket_dyn_templates::{Template, context};
 use scraper::{Scrape, Scraper};
+use std::str::FromStr;
 use storage::{Order, Sort, Storage};
 use torrent::Torrent;
-use url::Url;
-
-#[derive(Clone, Debug, Serialize)]
-#[serde(crate = "rocket::serde")]
-pub struct Meta {
-    pub canonical: Option<Url>,
-    pub description: Option<String>,
-    pub format_time: String,
-    pub title: String,
-    /// * use vector to keep the order from the arguments list
-    pub trackers: Option<Vec<Url>>,
-    pub version: String,
-}
 
 #[get("/?<page>")]
 fn index(
@@ -41,18 +32,6 @@ fn index(
     storage: &State<Storage>,
     meta: &State<Meta>,
 ) -> Result<Template, Custom<String>> {
-    #[derive(Serialize)]
-    #[serde(crate = "rocket::serde")]
-    struct Row {
-        created: Option<String>,
-        files: String,
-        indexed: String,
-        magnet: String,
-        scrape: Option<Scrape>,
-        size: String,
-        torrent: Torrent,
-    }
-
     let (total, torrents) = storage
         .torrents(
             Some((Sort::Modified, Order::Desc)),
@@ -74,23 +53,13 @@ fn index(
             rows: torrents
                 .into_iter()
                 .filter_map(|t| match Torrent::from_storage(&t.bytes, t.time) {
-                    Ok(torrent) => Some(Row {
-                        created: torrent
-                            .creation_date
-                            .map(|t| t.format(&meta.format_time).to_string()),
-                        indexed: torrent.time.format(&meta.format_time).to_string(),
-                        magnet: torrent.magnet(meta.trackers.as_ref()),
-                        scrape: scraper.scrape(&torrent.info_hash),
-                        size: torrent.size(),
-                        files: torrent.files(),
-                        torrent,
-                    }),
+                    Ok(torrent) => Some(Format::from_torrent(torrent, scraper, meta)),
                     Err(e) => {
                         error!("Torrent storage read error: `{e}`");
                         None
                     }
                 })
-                .collect::<Vec<Row>>(),
+                .collect::<Vec<Format>>(),
             pagination_totals: format!(
                 "Page {} / {} ({total} {} total)",
                 page.unwrap_or(1),
@@ -99,6 +68,34 @@ fn index(
             )
         },
     ))
+}
+
+#[get("/<info_hash>")]
+fn info(
+    info_hash: &str,
+    storage: &State<Storage>,
+    scraper: &State<Scraper>,
+    meta: &State<Meta>,
+) -> Result<Template, Custom<String>> {
+    match storage.torrent(librqbit_core::Id20::from_str(info_hash).map_err(|e| {
+        warn!("Torrent info-hash parse error: `{e}`");
+        Custom(Status::BadRequest, Status::BadRequest.to_string())
+    })?) {
+        Some(t) => Ok(Template::render(
+            "info",
+            context! {
+                meta: meta.inner(),
+                torrent: Format::from_torrent(
+                    Torrent::from_storage(&t.bytes, t.time).map_err(|e| {
+                        error!("Torrent parse error: `{e}`");
+                        Custom(Status::InternalServerError, E.to_string())
+                    })?, scraper, meta
+                ),
+                info_hash
+            },
+        )),
+        None => Err(Custom(Status::NotFound, E.to_string())),
+    }
 }
 
 #[get("/rss")]
@@ -189,7 +186,7 @@ fn rocket() -> _ {
             version: env!("CARGO_PKG_VERSION").into(),
         })
         .mount("/", rocket::fs::FileServer::from(config.statics))
-        .mount("/", routes![index, rss])
+        .mount("/", routes![index, info, rss])
 }
 
 /// Public placeholder text for the `Status::InternalServerError`

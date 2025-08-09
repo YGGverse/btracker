@@ -4,7 +4,7 @@
         {% for row in rows %}
             <div>
                 <a name="{{ row.torrent.info_hash }}"></a>
-                <h2>{{ row.torrent.name }}</h2>
+                <h2><a href="/{{ row.torrent.info_hash }}">{{ row.torrent.name }}</a></h2>
                 {% if row.torrent.comment %}<p>{{ row.torrent.comment }}</p>{% endif %}
                 <div>
                     <ul>

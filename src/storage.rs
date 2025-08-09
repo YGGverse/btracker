@@ -5,6 +5,8 @@ use std::{
     path::PathBuf,
 };
 
+const EXTENSION: &str = "torrent";
+
 #[derive(Clone, Debug, Default)]
 pub enum Sort {
     #[default]
@@ -49,6 +51,15 @@ impl Storage {
 
     // Getters
 
+    pub fn torrent(&self, info_hash: librqbit_core::Id20) -> Option<Torrent> {
+        let mut p = PathBuf::from(&self.root);
+        p.push(format!("{}.{EXTENSION}", info_hash.as_string()));
+        Some(Torrent {
+            bytes: fs::read(&p).ok()?,
+            time: p.metadata().ok()?.modified().ok()?.into(),
+        })
+    }
+
     pub fn torrents(
         &self,
         sort_order: Option<(Sort, Order)>,
@@ -66,7 +77,7 @@ impl Storage {
             .filter(|f| {
                 f.path()
                     .extension()
-                    .is_some_and(|e| !e.is_empty() && e.to_string_lossy() == "torrent")
+                    .is_some_and(|e| !e.is_empty() && e.to_string_lossy() == EXTENSION)
             })
         {
             b.push(Torrent {
