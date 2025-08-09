@@ -1,2 +1,4 @@
+/public/*
+!/public/theme
 /target
 Cargo.lock
