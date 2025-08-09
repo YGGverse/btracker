@@ -44,28 +44,20 @@ impl Torrent {
                     .unwrap_or_default(),
             files: i.info.files.map(|files| {
                 let mut b = Vec::with_capacity(files.len());
-                for f in files.iter() {
+                for f in files {
+                    let mut p = std::path::PathBuf::new();
                     b.push(File {
-                        name: String::from_utf8(
-                            f.path
-                                .iter()
-                                .enumerate()
-                                .flat_map(|(n, b)| {
-                                    if n == 0 {
-                                        b.0.to_vec()
-                                    } else {
-                                        let mut p = vec![b'/'];
-                                        p.extend(b.0.to_vec());
-                                        p
-                                    }
-                                })
-                                .collect(),
-                        )
-                        .ok(),
                         length: f.length,
+                        path: match f.full_path(&mut p) {
+                            Ok(()) => Some(p),
+                            Err(e) => {
+                                warn!("Filename decode error: {e}");
+                                None
+                            }
+                        },
                     })
                 }
-                b.sort_by(|a, b| a.name.cmp(&b.name)); // @TODO optional
+                b.sort_by(|a, b| a.path.cmp(&b.path)); // @TODO optional
                 b
             }),
             publisher_url: i.publisher_url.map(|u| u.to_string()),

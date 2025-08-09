@@ -102,7 +102,7 @@ fn info(
             #[derive(Serialize)]
             #[serde(crate = "rocket::serde")]
             struct F {
-                name: String,
+                path: String,
                 size: String,
             }
             let torrent = Torrent::from_storage(&t.bytes, t.time).map_err(|e| {
@@ -118,7 +118,7 @@ fn info(
                     files_list: torrent.files.as_ref().map(|f| {
                         f.iter()
                             .map(|f| F {
-                                name: f.name(),
+                                path: f.path(),
                                 size: f.size(),
                             })
                             .collect::<Vec<F>>()
