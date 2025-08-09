@@ -172,6 +172,9 @@ fn rss(meta: &State<Meta>, public: &State<Public>) -> Result<RawXml<String>, Cus
 fn rocket() -> _ {
     use clap::Parser;
     let config = Config::parse();
+    if config.canonical_url.is_none() {
+        warn!("Canonical URL option is required for the RSS feed by the specification!") // @TODO
+    }
     let scraper = Scraper::init(
         config
             .scrape
