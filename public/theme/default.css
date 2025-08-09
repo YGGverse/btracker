@@ -108,8 +108,8 @@ main > a {
     border-radius: 3px;
     float: right;
     margin-left: 8px;
-    opacity: .96;
-    padding: 8px 12px;
+    opacity: .9;
+    padding: 8px 16px;
 }
 
 /* item row */
@@ -117,7 +117,7 @@ main > div {
     background-color: var(--item);
     border-radius: 3px;
     margin: 8px 0;
-    padding: 24px;
+    padding: 16px;
 }
 
 /* item row description */
