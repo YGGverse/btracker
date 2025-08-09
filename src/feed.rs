@@ -1,10 +1,13 @@
+mod link;
+
 use crate::Torrent;
+use link::Link;
 use url::Url;
 
 /// Export crawl index to the RSS file
 pub struct Feed {
     buffer: String,
-    canonical: Option<Url>,
+    canonical: Link,
 }
 
 impl Feed {
@@ -43,7 +46,11 @@ impl Feed {
             buffer.push_str(c.as_str());
             buffer.push_str("</link>")
         }
-        Self { buffer, canonical }
+
+        Self {
+            buffer,
+            canonical: Link::from_url(canonical),
+        }
     }
 
     /// Append `item` to the feed `channel`
@@ -58,16 +65,7 @@ impl Feed {
                     .map(|b| b.to_string())
                     .unwrap_or("?".into()) // @TODO
             ),
-            self.canonical
-                .clone()
-                .map(|mut c| escape({
-                    c.set_path(&torrent.info_hash);
-                    c.set_fragment(None);
-                    c.set_query(None);
-                    c.as_str()
-                }))
-                .unwrap_or(escape(&torrent.info_hash)) // should be non-optional absolute URL
-                                                       // by the RSS specification @TODO
+            self.canonical.link(&torrent.info_hash)
         ));
 
         self.buffer.push_str("<description>");
