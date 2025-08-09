@@ -23,16 +23,18 @@ See the [Wiki](https://github.com/YGGverse/btracker/wiki/Screenshots) page
     * [x] Pagination
     * [ ] Search filter
     * [ ] Results order
-* [ ] Torrent details page
-    * [ ] Files list
-    * [ ] Background image (from the files asset)
+* [x] Torrent details page
+    * [x] Files list
+        * [x] Preloaded content preview
 * [ ] Common features
     * [ ] Scrape peers/seeders/leechers
         * [x] UDP
         * [ ] TCP
     * [ ] Download
-        * [x] Magnet
-        * [ ] Torrent
+        * [x] Magnet link
+        * [ ] Torrent file
+            * [x] From the `public` location
+            * [ ] Filtered trackers binary
 
 ## Install
 
