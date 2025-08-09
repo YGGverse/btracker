@@ -109,7 +109,7 @@ impl Public {
         let mut b = Vec::with_capacity(self.default_capacity);
         for entry in fs::read_dir(&self.root)? {
             let e = entry?;
-            if e.file_type()?.is_file() {
+            if e.file_type()?.is_file() && e.path().extension().is_some_and(|e| e == EXTENSION) {
                 b.push((e.metadata()?.modified()?, e))
             }
         }
