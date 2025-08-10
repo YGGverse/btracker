@@ -58,6 +58,10 @@ table th {
     padding: 4px 8px;
 }
 
+table td:last-child {
+    white-space: nowrap;
+}
+
 table > thead > tr > th {
     text-align: left;
 }
