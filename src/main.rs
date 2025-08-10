@@ -203,7 +203,7 @@ fn rocket() -> _ {
             ..if config.debug {
                 rocket::Config::debug_default()
             } else {
-                rocket::Config::default()
+                rocket::Config::release_default()
             }
         })
         .manage(scraper)
