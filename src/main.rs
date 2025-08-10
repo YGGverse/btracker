@@ -242,4 +242,4 @@ fn rocket() -> _ {
         .mount("/", routes![index, rss, info])
 }
 
-const S: &str = " - ";
+const S: &str = " • ";
