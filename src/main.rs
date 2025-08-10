@@ -56,7 +56,7 @@ fn index(
                     t.push_str(S);
                     t.push_str(description)
                 }
-                if let Some(p) = page {
+                if let Some(p) = page && p > 1 {
                     t.push_str(S);
                     t.push_str(&format!("Page {p}"));
                 }
