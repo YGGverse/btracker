@@ -94,7 +94,7 @@ header::first-letter {
 }
 
 header > div {
-    margin-top: 16px;
+    margin-top: 12px;
 }
 
 header > div > code:not(:last-child)::after {
