@@ -50,6 +50,18 @@ fn index(
     Ok(Template::render(
         "index",
         context! {
+            title: {
+                let mut t = meta.title.clone();
+                if let Some(ref description) = meta.description {
+                    t.push_str(S);
+                    t.push_str(description)
+                }
+                if let Some(p) = page {
+                    t.push_str(S);
+                    t.push_str(&format!("Page {p}"));
+                }
+                t
+            },
             meta: meta.inner(),
             back: page.map(|p| uri!(index(if p > 2 { Some(p - 1) } else { None }))),
             next: if page.unwrap_or(1) * public.default_limit >= total { None }
@@ -105,6 +117,15 @@ fn info(
             Ok(Template::render(
                 "info",
                 context! {
+                    title: {
+                        let mut t = String::new();
+                        if let Some(ref name) = torrent.name {
+                            t.push_str(name);
+                            t.push_str(S)
+                        }
+                        t.push_str(&meta.title);
+                        t
+                    },
                     meta: meta.inner(),
                     created: torrent.creation_date.map(|t| t.format(&meta.format_time).to_string()),
                     files_total: torrent.files(),
@@ -219,3 +240,5 @@ fn rocket() -> _ {
         .mount("/", rocket::fs::FileServer::from(config.public))
         .mount("/", routes![index, rss, info])
 }
+
+const S: &str = " - ";

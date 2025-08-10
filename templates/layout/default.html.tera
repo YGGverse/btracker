@@ -2,7 +2,7 @@
 <html>
     <head>
         <meta charset="UTF-8" />
-        <title>{{ meta.title }}</title>
+        <title>{{ title }}</title>
         {% if meta.description %}
             <meta name="description" content="{{ meta.description }}" />
         {% endif %}
