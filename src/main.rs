@@ -51,14 +51,15 @@ fn index(
         "index",
         context! {
             title: {
-                let mut t = meta.title.clone();
+                let mut t = String::new();
+                if let Some(p) = page && p > 1 {
+                    t.push_str(&format!("Page {p}"));
+                    t.push_str(S)
+                }
+                t.push_str(&meta.title);
                 if let Some(ref description) = meta.description {
                     t.push_str(S);
                     t.push_str(description)
-                }
-                if let Some(p) = page && p > 1 {
-                    t.push_str(S);
-                    t.push_str(&format!("Page {p}"));
                 }
                 t
             },
