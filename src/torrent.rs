@@ -85,6 +85,10 @@ impl Torrent {
 
     pub fn magnet(&self, trackers: Option<&Vec<url::Url>>) -> String {
         let mut b = format!("magnet:?xt=urn:btih:{}", self.info_hash);
+        if let Some(ref n) = self.name {
+            b.push_str("&dn=");
+            b.push_str(&urlencoding::encode(n))
+        }
         if let Some(t) = trackers {
             for tracker in t {
                 b.push_str("&tr=");
