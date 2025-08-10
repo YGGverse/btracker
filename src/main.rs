@@ -13,12 +13,7 @@ use feed::Feed;
 use meta::Meta;
 use plurify::Plurify;
 use public::{Order, Public, Sort};
-use rocket::{
-    State,
-    http::Status,
-    response::{content::RawXml, status::Custom},
-    serde::Serialize,
-};
+use rocket::{State, http::Status, response::content::RawXml, serde::Serialize};
 use rocket_dyn_templates::{Template, context};
 use scraper::{Scrape, Scraper};
 use std::str::FromStr;
@@ -30,7 +25,7 @@ fn index(
     scraper: &State<Scraper>,
     public: &State<Public>,
     meta: &State<Meta>,
-) -> Result<Template, Custom<String>> {
+) -> Result<Template, Status> {
     #[derive(Serialize)]
     #[serde(crate = "rocket::serde")]
     struct R {
@@ -50,7 +45,7 @@ fn index(
         )
         .map_err(|e| {
             error!("Torrents public storage read error: `{e}`");
-            Custom(Status::InternalServerError, E.to_string())
+            Status::InternalServerError
         })?;
     Ok(Template::render(
         "index",
@@ -93,11 +88,8 @@ fn info(
     public: &State<Public>,
     scraper: &State<Scraper>,
     meta: &State<Meta>,
-) -> Result<Template, Custom<String>> {
-    match public.torrent(librqbit_core::Id20::from_str(info_hash).map_err(|e| {
-        warn!("Torrent info-hash parse error: `{e}`");
-        Custom(Status::BadRequest, Status::BadRequest.to_string())
-    })?) {
+) -> Result<Template, Status> {
+    match public.torrent(librqbit_core::Id20::from_str(info_hash).map_err(|_| Status::NotFound)?) {
         Some(t) => {
             #[derive(Serialize)]
             #[serde(crate = "rocket::serde")]
@@ -108,7 +100,7 @@ fn info(
             }
             let torrent = Torrent::from_public(&t.bytes, t.time).map_err(|e| {
                 error!("Torrent parse error: `{e}`");
-                Custom(Status::InternalServerError, E.to_string())
+                Status::InternalServerError
             })?;
             Ok(Template::render(
                 "info",
@@ -136,12 +128,12 @@ fn info(
                 },
             ))
         }
-        None => Err(Custom(Status::NotFound, E.to_string())),
+        None => Err(Status::NotFound),
     }
 }
 
 #[get("/rss")]
-fn rss(meta: &State<Meta>, public: &State<Public>) -> Result<RawXml<String>, Custom<String>> {
+fn rss(meta: &State<Meta>, public: &State<Public>) -> Result<RawXml<String>, Status> {
     let mut f = Feed::new(
         &meta.title,
         meta.description.as_deref(),
@@ -156,13 +148,13 @@ fn rss(meta: &State<Meta>, public: &State<Public>) -> Result<RawXml<String>, Cus
         )
         .map_err(|e| {
             error!("Torrent public storage read error: `{e}`");
-            Custom(Status::InternalServerError, E.to_string())
+            Status::InternalServerError
         })?
         .1
     {
         f.push(Torrent::from_public(&t.bytes, t.time).map_err(|e| {
             error!("Torrent parse error: `{e}`");
-            Custom(Status::InternalServerError, E.to_string())
+            Status::InternalServerError
         })?)
     }
     Ok(RawXml(f.commit()))
@@ -225,8 +217,5 @@ fn rocket() -> _ {
             version: env!("CARGO_PKG_VERSION").into(),
         })
         .mount("/", rocket::fs::FileServer::from(config.public))
-        .mount("/", routes![index, rss, info]) // keep the order!
+        .mount("/", routes![index, rss, info])
 }
-
-/// Public placeholder text for the `Status::InternalServerError`
-const E: &str = "Oops!";
