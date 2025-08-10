@@ -225,7 +225,7 @@ fn rocket() -> _ {
             version: env!("CARGO_PKG_VERSION").into(),
         })
         .mount("/", rocket::fs::FileServer::from(config.public))
-        .mount("/", routes![index, rss, info])
+        .mount("/", routes![index, rss, info]) // keep the order!
 }
 
 /// Public placeholder text for the `Status::InternalServerError`
