@@ -57,7 +57,7 @@ fn index(
                     t.push_str(S)
                 }
                 t.push_str(&meta.title);
-                if let Some(ref description) = meta.description {
+                if let Some(ref description) = meta.description && page.is_none_or(|p| p == 1) {
                     t.push_str(S);
                     t.push_str(description)
                 }
