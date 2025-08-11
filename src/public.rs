@@ -121,6 +121,17 @@ impl Public {
                                 .is_some_and(|n| n.to_string().to_lowercase().contains(&q))
                             || m.comment
                                 .is_some_and(|c| c.to_string().to_lowercase().contains(&q))
+                            || m.created_by
+                                .is_some_and(|c| c.to_string().to_lowercase().contains(&q))
+                            || m.publisher
+                                .is_some_and(|p| p.to_string().to_lowercase().contains(&q))
+                            || m.publisher_url
+                                .is_some_and(|u| u.to_string().to_lowercase().contains(&q))
+                            || m.announce
+                                .is_some_and(|a| a.to_string().to_lowercase().contains(&q))
+                            || m.announce_list.iter().any(|l| {
+                                l.iter().any(|a| a.to_string().to_lowercase().contains(&q))
+                            })
                             || m.info.files.is_some_and(|f| {
                                 f.iter().any(|f| {
                                     let mut p = PathBuf::new();
