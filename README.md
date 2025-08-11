@@ -70,6 +70,7 @@ cargo install btracker
 1. `git clone https://github.com/yggverse/btracker.git && cd btracker`
 2. `cargo build --release`
 3. `sudo install target/release/btracker /usr/local/bin/btracker`
+    * copy `public` & `templates` folders to the [server destination](https://rocket.rs/guide/v0.5/deploying/)
 
 ## Usage
 
