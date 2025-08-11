@@ -1,11 +1,12 @@
 use chrono::{DateTime, Utc};
-use std::{
-    fs::{self, DirEntry},
-    io::Error,
-    path::PathBuf,
-};
+use std::{fs, io::Error, path::PathBuf, time::SystemTime};
 
 const EXTENSION: &str = "torrent";
+
+struct File {
+    modified: SystemTime,
+    path: PathBuf,
+}
 
 #[derive(Clone, Debug, Default)]
 pub enum Sort {
@@ -73,8 +74,8 @@ impl Public {
         let mut b = Vec::with_capacity(l);
         for file in f.into_iter().skip(start.unwrap_or_default()).take(l) {
             b.push(Torrent {
-                bytes: fs::read(file.path())?,
-                time: file.metadata()?.modified()?.into(),
+                bytes: fs::read(file.path)?,
+                time: file.modified.into(),
             })
         }
         Ok((t, b))
@@ -101,7 +102,7 @@ impl Public {
         &self,
         keyword: Option<&str>,
         sort_order: Option<(Sort, Order)>,
-    ) -> Result<Vec<DirEntry>, Error> {
+    ) -> Result<Vec<File>, Error> {
         let mut b = Vec::with_capacity(self.default_capacity);
         for entry in fs::read_dir(&self.root)? {
             let e = entry?;
@@ -130,16 +131,19 @@ impl Public {
             }) {
                 continue;
             }
-            b.push((e.metadata()?.modified()?, e))
+            b.push(File {
+                path: e.path(),
+                modified: e.metadata()?.modified()?,
+            })
         }
         if let Some((sort, order)) = sort_order {
             match sort {
                 Sort::Modified => match order {
-                    Order::Asc => b.sort_by(|a, b| a.0.cmp(&b.0)),
-                    Order::Desc => b.sort_by(|a, b| b.0.cmp(&a.0)),
+                    Order::Asc => b.sort_by(|a, b| a.modified.cmp(&b.modified)),
+                    Order::Desc => b.sort_by(|a, b| b.modified.cmp(&a.modified)),
                 },
             }
         }
-        Ok(b.into_iter().map(|e| e.1).collect())
+        Ok(b)
     }
 }
