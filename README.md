@@ -21,7 +21,8 @@ See the [Wiki](https://github.com/YGGverse/btracker/wiki/Screenshots) page
     * [x] Basic metainfo
     * [x] Pagination
     * [x] Search filter
-        * [x] multiple keywords
+        * [x] multiple keyword support
+            [ ] configurable split separators
         * [x] torrent meta match
             * [x] name
             * [x] comment
