@@ -159,7 +159,7 @@ main > div {
 
 /* item row description */
 main > div > p {
-    margin: 8px 0;
+    margin: 8px;
 }
 
 /* item row meta, controls */
