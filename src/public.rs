@@ -70,16 +70,7 @@ impl Public {
         let t = f.len();
         let l = limit.unwrap_or(t);
         let mut b = Vec::with_capacity(l);
-        for file in f
-            .into_iter()
-            .skip(start.unwrap_or_default())
-            .take(l)
-            .filter(|f| {
-                f.path()
-                    .extension()
-                    .is_some_and(|e| !e.is_empty() && e.to_string_lossy() == EXTENSION)
-            })
-        {
+        for file in f.into_iter().skip(start.unwrap_or_default()).take(l) {
             b.push(Torrent {
                 bytes: fs::read(file.path())?,
                 time: file.metadata()?.modified()?.into(),
