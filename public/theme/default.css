@@ -140,6 +140,7 @@ main {
 /* pagination */
 main > a {
     background: var(--item);
+    border: 1px solid var(--item);
     border-radius: 3px;
     float: right;
     margin-left: 8px;
