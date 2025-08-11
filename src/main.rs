@@ -19,8 +19,9 @@ use scraper::{Scrape, Scraper};
 use std::str::FromStr;
 use torrent::Torrent;
 
-#[get("/?<page>")]
+#[get("/?<search>&<page>")]
 fn index(
+    search: Option<&str>,
     page: Option<usize>,
     scraper: &State<Scraper>,
     public: &State<Public>,
@@ -39,6 +40,7 @@ fn index(
     }
     let (total, torrents) = public
         .torrents(
+            search,
             Some((Sort::Modified, Order::Desc)),
             page.map(|p| if p > 0 { p - 1 } else { p } * public.default_limit),
             Some(public.default_limit),
@@ -52,6 +54,10 @@ fn index(
         context! {
             title: {
                 let mut t = String::new();
+                if let Some(q) = search && !q.is_empty() {
+                    t.push_str(q);
+                    t.push_str(S)
+                }
                 if let Some(p) = page && p > 1 {
                     t.push_str(&format!("Page {p}"));
                     t.push_str(S)
@@ -64,9 +70,9 @@ fn index(
                 t
             },
             meta: meta.inner(),
-            back: page.map(|p| uri!(index(if p > 2 { Some(p - 1) } else { None }))),
+            back: page.map(|p| uri!(index(search, if p > 2 { Some(p - 1) } else { None }))),
             next: if page.unwrap_or(1) * public.default_limit >= total { None }
-                    else { Some(uri!(index(Some(page.map_or(2, |p| p + 1))))) },
+                    else { Some(uri!(index(search, Some(page.map_or(2, |p| p + 1))))) },
             rows: torrents
                 .into_iter()
                 .filter_map(|t| match Torrent::from_public(&t.bytes, t.time) {
@@ -90,7 +96,8 @@ fn index(
                 page.unwrap_or(1),
                 (total as f64 / public.default_limit as f64).ceil(),
                 total.plurify(&["torrent", "torrents", "torrents"])
-            )
+            ),
+            search
         },
     ))
 }
@@ -164,6 +171,7 @@ fn rss(meta: &State<Meta>, public: &State<Public>) -> Result<RawXml<String>, Sta
     );
     for t in public
         .torrents(
+            None,
             Some((Sort::Modified, Order::Desc)),
             None,
             Some(public.default_limit),

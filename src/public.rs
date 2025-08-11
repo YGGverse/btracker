@@ -26,8 +26,8 @@ pub struct Torrent {
 }
 
 pub struct Public {
-    pub default_limit: usize,
     default_capacity: usize,
+    pub default_limit: usize,
     root: PathBuf,
 }
 
@@ -43,8 +43,8 @@ impl Public {
             return Err("Public root is not directory".into());
         }
         Ok(Self {
-            default_limit,
             default_capacity,
+            default_limit,
             root: root.canonicalize().map_err(|e| e.to_string())?,
         })
     }
@@ -62,11 +62,12 @@ impl Public {
 
     pub fn torrents(
         &self,
+        keyword: Option<&str>,
         sort_order: Option<(Sort, Order)>,
         start: Option<usize>,
         limit: Option<usize>,
     ) -> Result<(usize, Vec<Torrent>), Error> {
-        let f = self.files(sort_order)?;
+        let f = self.files(keyword, sort_order)?;
         let t = f.len();
         let l = limit.unwrap_or(t);
         let mut b = Vec::with_capacity(l);
@@ -96,13 +97,40 @@ impl Public {
 
     // Helpers
 
-    fn files(&self, sort_order: Option<(Sort, Order)>) -> Result<Vec<DirEntry>, Error> {
+    fn files(
+        &self,
+        keyword: Option<&str>,
+        sort_order: Option<(Sort, Order)>,
+    ) -> Result<Vec<DirEntry>, Error> {
         let mut b = Vec::with_capacity(self.default_capacity);
         for entry in fs::read_dir(&self.root)? {
             let e = entry?;
-            if e.file_type()?.is_file() && e.path().extension().is_some_and(|e| e == EXTENSION) {
-                b.push((e.metadata()?.modified()?, e))
+            let p = e.path();
+            if !p.is_file() || p.extension().is_none_or(|e| e != EXTENSION) {
+                continue;
             }
+            if keyword.is_some_and(|k| {
+                !k.is_empty()
+                    && !librqbit_core::torrent_metainfo::torrent_from_bytes(
+                        &fs::read(e.path()).unwrap(),
+                    )
+                    .is_ok_and(
+                        |m: librqbit_core::torrent_metainfo::TorrentMetaV1Owned| {
+                            m.info_hash.as_string().contains(k)
+                                || m.info.name.is_some_and(|n| n.to_string().contains(k))
+                                || m.info.files.is_some_and(|f| {
+                                    f.iter().any(|f| {
+                                        let mut p = PathBuf::new();
+                                        f.full_path(&mut p)
+                                            .is_ok_and(|_| p.to_string_lossy().contains(k))
+                                    })
+                                })
+                        },
+                    ) // @TODO implement fast in-memory search index
+            }) {
+                continue;
+            }
+            b.push((e.metadata()?.modified()?, e))
         }
         if let Some((sort, order)) = sort_order {
             match sort {

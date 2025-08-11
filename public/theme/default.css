@@ -67,7 +67,38 @@ table > thead > tr > th {
 }
 
 table > tbody > tr:hover > td {
-    background: var(--background)
+    background: var(--background);
+}
+
+form {
+    margin-top: 16px;
+}
+
+form input {
+    background: var(--item);
+    border-color: var(--item);
+    border-radius: 3px;
+    border-style: solid;
+    border-width: 1px;
+    color: var(--default);
+    opacity: 0.9;
+}
+
+form input:hover {
+    opacity: 1;
+}
+
+form input[type="text"] {
+    padding: 8px;
+}
+
+form input[type="text"]:focus {
+    border-color: var(--separator);
+}
+
+form input[type="submit"] {
+    cursor: pointer;
+    padding: 8px 16px;
 }
 
 body > * {
