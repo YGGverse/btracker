@@ -33,9 +33,9 @@ See the [Wiki](https://github.com/YGGverse/btracker/wiki/Screenshots) page
             * [x] announce list
             * [x] file names
         * [ ] relevance ranking
-        * [ ] fast n-memory index
+        * [ ] fast in-memory index
         * [ ] search options form
-    * [ ] results order controls (torrent indexed by default)
+    * [ ] sort order (time indexed by default)
 * [x] Details page
     * [x] files
         * [x] clickable content preview
