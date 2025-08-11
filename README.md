@@ -20,7 +20,7 @@ See the [Wiki](https://github.com/YGGverse/btracker/wiki/Screenshots) page
 * [ ] Listing (index) page
     * [x] Basic metainfo
     * [x] Pagination
-    * [x] Search filter
+    * [x] Search
         * [x] multiple keyword support
             [ ] configurable split separators
         * [x] torrent meta match
