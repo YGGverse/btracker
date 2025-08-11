@@ -1,13 +1,6 @@
 use chrono::{DateTime, Utc};
 use std::{fs, io::Error, path::PathBuf, time::SystemTime};
 
-const EXTENSION: &str = "torrent";
-
-struct File {
-    modified: SystemTime,
-    path: PathBuf,
-}
-
 #[derive(Clone, Debug, Default)]
 pub enum Sort {
     #[default]
@@ -54,7 +47,7 @@ impl Public {
 
     pub fn torrent(&self, info_hash: librqbit_core::Id20) -> Option<Torrent> {
         let mut p = PathBuf::from(&self.root);
-        p.push(format!("{}.{EXTENSION}", info_hash.as_string()));
+        p.push(format!("{}.{E}", info_hash.as_string()));
         Some(Torrent {
             bytes: fs::read(&p).ok()?,
             time: p.metadata().ok()?.modified().ok()?.into(),
@@ -103,16 +96,11 @@ impl Public {
         keyword: Option<&str>,
         sort_order: Option<(Sort, Order)>,
     ) -> Result<Vec<File>, Error> {
-        /// Search keyword separators
-        const S: &[char] = &[
-            '_', '-', ':', ';', ',', '(', ')', '[', ']', '/', '!', '?',
-            ' ', // @TODO make optional
-        ];
         let mut files = Vec::with_capacity(self.default_capacity);
         for dir_entry in fs::read_dir(&self.root)? {
             let entry = dir_entry?;
             let path = entry.path();
-            if !path.is_file() || path.extension().is_none_or(|e| e != EXTENSION) {
+            if !path.is_file() || path.extension().is_none_or(|e| e != E) {
                 continue;
             }
             if let Some(k) = keyword
@@ -174,4 +162,19 @@ impl Public {
         }
         Ok(files)
     }
+}
+
+// Local members
+
+/// Torrent file extension
+const E: &str = "torrent";
+
+/// Search keyword separators
+const S: &[char] = &[
+    '_', '-', ':', ';', ',', '(', ')', '[', ']', '/', '!', '?', ' ', // @TODO make optional
+];
+
+struct File {
+    modified: SystemTime,
+    path: PathBuf,
 }
