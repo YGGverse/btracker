@@ -71,7 +71,7 @@ table > tbody > tr:hover > td {
 }
 
 form {
-    margin-top: 16px;
+    margin-top: 20px;
 }
 
 form input {
@@ -89,7 +89,7 @@ form input:hover {
 }
 
 form input[type="text"] {
-    padding: 8px;
+    padding: 6px 8px;
 }
 
 form input[type="text"]:focus {
@@ -98,7 +98,7 @@ form input[type="text"]:focus {
 
 form input[type="submit"] {
     cursor: pointer;
-    padding: 8px 16px;
+    padding: 6px 12px;
 }
 
 body > * {
@@ -144,7 +144,7 @@ main > a {
     float: right;
     margin-left: 8px;
     opacity: .9;
-    padding: 8px 16px;
+    padding: 6px 12px;
 }
 
 /* item row */
@@ -234,7 +234,7 @@ main > div > div > div > a.magnet {
 /* pagination info */
 main > span {
     float: right;
-    padding: 8px;
+    padding: 6px;
 }
 
 footer {
