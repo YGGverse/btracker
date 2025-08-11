@@ -110,29 +110,26 @@ impl Public {
             if !p.is_file() || p.extension().is_none_or(|e| e != EXTENSION) {
                 continue;
             }
-            if keyword.is_some_and(|k| {
-                !k.is_empty()
-                    && !librqbit_core::torrent_metainfo::torrent_from_bytes(
-                        &fs::read(e.path()).unwrap(),
-                    )
-                    .is_ok_and(
-                        |m: librqbit_core::torrent_metainfo::TorrentMetaV1Owned| {
-                            m.info_hash.as_string().contains(k)
-                                || m.info.name.is_some_and(|n| n.to_string().contains(k))
-                                || m.info.files.is_some_and(|f| {
-                                    f.iter().any(|f| {
-                                        let mut p = PathBuf::new();
-                                        f.full_path(&mut p)
-                                            .is_ok_and(|_| p.to_string_lossy().contains(k))
-                                    })
+            if let Some(k) = keyword
+                && !k.is_empty()
+                && !librqbit_core::torrent_metainfo::torrent_from_bytes(&fs::read(&p)?).is_ok_and(
+                    |m: librqbit_core::torrent_metainfo::TorrentMetaV1Owned| {
+                        m.info_hash.as_string().contains(k)
+                            || m.info.name.is_some_and(|n| n.to_string().contains(k))
+                            || m.info.files.is_some_and(|f| {
+                                f.iter().any(|f| {
+                                    let mut p = PathBuf::new();
+                                    f.full_path(&mut p)
+                                        .is_ok_and(|_| p.to_string_lossy().contains(k))
                                 })
-                        },
-                    ) // @TODO implement fast in-memory search index
-            }) {
+                            })
+                    },
+                )
+            {
                 continue;
             }
             f.push(File {
-                path: e.path(),
+                path: p,
                 modified: e.metadata()?.modified()?,
             })
         }
