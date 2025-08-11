@@ -21,7 +21,10 @@ See the [Wiki](https://github.com/YGGverse/btracker/wiki/Screenshots) page
 * [ ] Torrents listing
     * [x] Basic metainfo
     * [x] Pagination
-    * [ ] Search filter
+    * [x] Search filter
+        * [x] By torrent name
+        * [x] By torrent files name
+        * [ ] Options form
     * [ ] Results order
 * [x] Torrent details page
     * [x] Files list
