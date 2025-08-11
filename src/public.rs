@@ -104,16 +104,16 @@ impl Public {
         sort_order: Option<(Sort, Order)>,
     ) -> Result<Vec<File>, Error> {
         let mut f = Vec::with_capacity(self.default_capacity);
-        for entry in fs::read_dir(&self.root)? {
-            let e = entry?;
-            let p = e.path();
-            if !p.is_file() || p.extension().is_none_or(|e| e != EXTENSION) {
+        for dir_entry in fs::read_dir(&self.root)? {
+            let entry = dir_entry?;
+            let path = entry.path();
+            if !path.is_file() || path.extension().is_none_or(|e| e != EXTENSION) {
                 continue;
             }
             if let Some(k) = keyword
                 && !k.is_empty()
-                && !librqbit_core::torrent_metainfo::torrent_from_bytes(&fs::read(&p)?).is_ok_and(
-                    |m: librqbit_core::torrent_metainfo::TorrentMetaV1Owned| {
+                && !librqbit_core::torrent_metainfo::torrent_from_bytes(&fs::read(&path)?)
+                    .is_ok_and(|m: librqbit_core::torrent_metainfo::TorrentMetaV1Owned| {
                         m.info_hash.as_string().contains(k)
                             || m.info.name.is_some_and(|n| n.to_string().contains(k))
                             || m.info.files.is_some_and(|f| {
@@ -123,14 +123,13 @@ impl Public {
                                         .is_ok_and(|_| p.to_string_lossy().contains(k))
                                 })
                             })
-                    },
-                )
+                    })
             {
                 continue;
             }
             f.push(File {
-                path: p,
-                modified: e.metadata()?.modified()?,
+                modified: entry.metadata()?.modified()?,
+                path,
             })
         }
         if let Some((sort, order)) = sort_order {
