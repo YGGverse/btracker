@@ -17,27 +17,45 @@ See the [Wiki](https://github.com/YGGverse/btracker/wiki/Screenshots) page
 
 ## Roadmap
 
-* [x] RSS feeds
-* [ ] Torrents listing
+* [ ] Listing (index) page
     * [x] Basic metainfo
     * [x] Pagination
     * [x] Search filter
-        * [x] By torrent name
-        * [x] By torrent files name
-        * [ ] Options form
-    * [ ] Results order
-* [x] Torrent details page
-    * [x] Files list
-        * [x] Preloaded content preview
+        * [x] multiple keywords
+        * [x] torrent meta match
+            * [x] name
+            * [x] comment
+            * [x] created by
+            * [x] publisher
+            * [x] publisher URL
+            * [x] announce
+            * [x] announce list
+            * [x] file names
+        * [ ] relevance ranking
+        * [ ] fast n-memory index
+        * [ ] search options form
+    * [ ] results order controls (torrent indexed by default)
+* [x] Details page
+    * [x] files
+        * [x] clickable content preview
+    * [x] name
+    * [x] comment
+    * [x] created at
+    * [ ] created by
+    * [ ] publisher
+    * [ ] publisher URL
+    * [ ] announce
+    * [ ] announce list
 * [ ] Common features
-    * [ ] Scrape peers/seeders/leechers
+    * [ ] scrape peers/seeders/leechers
         * [x] UDP
         * [ ] TCP
-    * [ ] Download
-        * [x] Magnet link
-        * [ ] Torrent file
-            * [x] From the `public` location
-            * [ ] Filtered trackers binary
+    * [ ] download
+        * [x] magnet link
+        * [ ] torrent file
+            * [x] from the `public` location
+            * [ ] filtered trackers binary
+* [x] RSS feed
 
 ## Install
 
