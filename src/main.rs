@@ -94,12 +94,14 @@ fn index(
                     }
                 })
                 .collect::<Vec<R>>(),
-            pagination_totals: format!(
-                "Page {} / {} ({total} {} total)",
-                page.unwrap_or(1),
-                (total as f64 / public.default_limit as f64).ceil(),
-                total.plurify(&["torrent", "torrents", "torrents"])
-            ),
+            pagination_totals: if total > 0 {
+                Some(format!(
+                    "Page {} / {} ({total} {} total)",
+                    page.unwrap_or(1),
+                    (total as f64 / public.default_limit as f64).ceil(),
+                    total.plurify(&["torrent", "torrents", "torrents"])
+                ))
+            } else { None },
             search
         },
     ))
