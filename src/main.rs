@@ -56,6 +56,8 @@ fn index(
                 let mut t = String::new();
                 if let Some(q) = search && !q.is_empty() {
                     t.push_str(q);
+                    t.push_str(S);
+                    t.push_str("Search");
                     t.push_str(S)
                 }
                 if let Some(p) = page && p > 1 {
