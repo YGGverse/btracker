@@ -103,7 +103,7 @@ impl Public {
         keyword: Option<&str>,
         sort_order: Option<(Sort, Order)>,
     ) -> Result<Vec<File>, Error> {
-        let mut b = Vec::with_capacity(self.default_capacity);
+        let mut f = Vec::with_capacity(self.default_capacity);
         for entry in fs::read_dir(&self.root)? {
             let e = entry?;
             let p = e.path();
@@ -131,7 +131,7 @@ impl Public {
             }) {
                 continue;
             }
-            b.push(File {
+            f.push(File {
                 path: e.path(),
                 modified: e.metadata()?.modified()?,
             })
@@ -139,11 +139,11 @@ impl Public {
         if let Some((sort, order)) = sort_order {
             match sort {
                 Sort::Modified => match order {
-                    Order::Asc => b.sort_by(|a, b| a.modified.cmp(&b.modified)),
-                    Order::Desc => b.sort_by(|a, b| b.modified.cmp(&a.modified)),
+                    Order::Asc => f.sort_by(|a, b| a.modified.cmp(&b.modified)),
+                    Order::Desc => f.sort_by(|a, b| b.modified.cmp(&a.modified)),
                 },
             }
         }
-        Ok(b)
+        Ok(f)
     }
 }
