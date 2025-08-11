@@ -103,6 +103,10 @@ impl Public {
         keyword: Option<&str>,
         sort_order: Option<(Sort, Order)>,
     ) -> Result<Vec<File>, Error> {
+        const S: &[char] = &[
+            '_', '-', ':', ';', ',', '(', ')', '[', ']', '/', '!', '?',
+            ' ', // @TODO make separators list optional
+        ];
         let mut files = Vec::with_capacity(self.default_capacity);
         for dir_entry in fs::read_dir(&self.root)? {
             let entry = dir_entry?;
@@ -111,48 +115,45 @@ impl Public {
                 continue;
             }
             if let Some(k) = keyword
-                && !k.is_empty()
+                && !k.trim_matches(S).is_empty()
                 && !librqbit_core::torrent_metainfo::torrent_from_bytes(&fs::read(&path)?)
                     .is_ok_and(|m: librqbit_core::torrent_metainfo::TorrentMetaV1Owned| {
-                        k.split([
-                            '_', '-', ':', ';', ',', '(', ')', '[', ']', '/', '!', '?',
-                            ' ', // @TODO make separators list optional
-                        ])
-                        .filter(|s| !s.is_empty())
-                        .map(|s| s.trim().to_lowercase())
-                        .all(|q| {
-                            m.info_hash.as_string().to_lowercase().contains(&q)
-                                || m.info
-                                    .name
-                                    .as_ref()
-                                    .is_some_and(|n| n.to_string().to_lowercase().contains(&q))
-                                || m.comment
-                                    .as_ref()
-                                    .is_some_and(|c| c.to_string().to_lowercase().contains(&q))
-                                || m.created_by
-                                    .as_ref()
-                                    .is_some_and(|c| c.to_string().to_lowercase().contains(&q))
-                                || m.publisher
-                                    .as_ref()
-                                    .is_some_and(|p| p.to_string().to_lowercase().contains(&q))
-                                || m.publisher_url
-                                    .as_ref()
-                                    .is_some_and(|u| u.to_string().to_lowercase().contains(&q))
-                                || m.announce
-                                    .as_ref()
-                                    .is_some_and(|a| a.to_string().to_lowercase().contains(&q))
-                                || m.announce_list.iter().any(|l| {
-                                    l.iter().any(|a| a.to_string().to_lowercase().contains(&q))
-                                })
-                                || m.info.files.as_ref().is_some_and(|f| {
-                                    f.iter().any(|f| {
-                                        let mut p = PathBuf::new();
-                                        f.full_path(&mut p).is_ok_and(|_| {
-                                            p.to_string_lossy().to_lowercase().contains(&q)
+                        k.split(S)
+                            .filter(|s| !s.is_empty())
+                            .map(|s| s.trim().to_lowercase())
+                            .all(|q| {
+                                m.info_hash.as_string().to_lowercase().contains(&q)
+                                    || m.info
+                                        .name
+                                        .as_ref()
+                                        .is_some_and(|n| n.to_string().to_lowercase().contains(&q))
+                                    || m.comment
+                                        .as_ref()
+                                        .is_some_and(|c| c.to_string().to_lowercase().contains(&q))
+                                    || m.created_by
+                                        .as_ref()
+                                        .is_some_and(|c| c.to_string().to_lowercase().contains(&q))
+                                    || m.publisher
+                                        .as_ref()
+                                        .is_some_and(|p| p.to_string().to_lowercase().contains(&q))
+                                    || m.publisher_url
+                                        .as_ref()
+                                        .is_some_and(|u| u.to_string().to_lowercase().contains(&q))
+                                    || m.announce
+                                        .as_ref()
+                                        .is_some_and(|a| a.to_string().to_lowercase().contains(&q))
+                                    || m.announce_list.iter().any(|l| {
+                                        l.iter().any(|a| a.to_string().to_lowercase().contains(&q))
+                                    })
+                                    || m.info.files.as_ref().is_some_and(|f| {
+                                        f.iter().any(|f| {
+                                            let mut p = PathBuf::new();
+                                            f.full_path(&mut p).is_ok_and(|_| {
+                                                p.to_string_lossy().to_lowercase().contains(&q)
+                                            })
                                         })
                                     })
-                                })
-                        })
+                            })
                     })
             {
                 continue;
