@@ -119,6 +119,8 @@ impl Public {
                             || m.info
                                 .name
                                 .is_some_and(|n| n.to_string().to_lowercase().contains(&q))
+                            || m.comment
+                                .is_some_and(|c| c.to_string().to_lowercase().contains(&q))
                             || m.info.files.is_some_and(|f| {
                                 f.iter().any(|f| {
                                     let mut p = PathBuf::new();
