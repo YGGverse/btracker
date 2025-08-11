@@ -103,9 +103,10 @@ impl Public {
         keyword: Option<&str>,
         sort_order: Option<(Sort, Order)>,
     ) -> Result<Vec<File>, Error> {
+        /// Search keyword separators
         const S: &[char] = &[
             '_', '-', ':', ';', ',', '(', ')', '[', ']', '/', '!', '?',
-            ' ', // @TODO make separators list optional
+            ' ', // @TODO make optional
         ];
         let mut files = Vec::with_capacity(self.default_capacity);
         for dir_entry in fs::read_dir(&self.root)? {
