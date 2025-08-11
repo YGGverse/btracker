@@ -114,13 +114,17 @@ impl Public {
                 && !k.is_empty()
                 && !librqbit_core::torrent_metainfo::torrent_from_bytes(&fs::read(&path)?)
                     .is_ok_and(|m: librqbit_core::torrent_metainfo::TorrentMetaV1Owned| {
-                        m.info_hash.as_string().contains(k)
-                            || m.info.name.is_some_and(|n| n.to_string().contains(k))
+                        let q = k.to_lowercase();
+                        m.info_hash.as_string().to_lowercase().contains(&q)
+                            || m.info
+                                .name
+                                .is_some_and(|n| n.to_string().to_lowercase().contains(&q))
                             || m.info.files.is_some_and(|f| {
                                 f.iter().any(|f| {
                                     let mut p = PathBuf::new();
-                                    f.full_path(&mut p)
-                                        .is_ok_and(|_| p.to_string_lossy().contains(k))
+                                    f.full_path(&mut p).is_ok_and(|_| {
+                                        p.to_string_lossy().to_lowercase().contains(&q)
+                                    })
                                 })
                             })
                     })
