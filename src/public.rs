@@ -114,32 +114,45 @@ impl Public {
                 && !k.is_empty()
                 && !librqbit_core::torrent_metainfo::torrent_from_bytes(&fs::read(&path)?)
                     .is_ok_and(|m: librqbit_core::torrent_metainfo::TorrentMetaV1Owned| {
-                        let q = k.to_lowercase();
-                        m.info_hash.as_string().to_lowercase().contains(&q)
-                            || m.info
-                                .name
-                                .is_some_and(|n| n.to_string().to_lowercase().contains(&q))
-                            || m.comment
-                                .is_some_and(|c| c.to_string().to_lowercase().contains(&q))
-                            || m.created_by
-                                .is_some_and(|c| c.to_string().to_lowercase().contains(&q))
-                            || m.publisher
-                                .is_some_and(|p| p.to_string().to_lowercase().contains(&q))
-                            || m.publisher_url
-                                .is_some_and(|u| u.to_string().to_lowercase().contains(&q))
-                            || m.announce
-                                .is_some_and(|a| a.to_string().to_lowercase().contains(&q))
-                            || m.announce_list.iter().any(|l| {
-                                l.iter().any(|a| a.to_string().to_lowercase().contains(&q))
-                            })
-                            || m.info.files.is_some_and(|f| {
-                                f.iter().any(|f| {
-                                    let mut p = PathBuf::new();
-                                    f.full_path(&mut p).is_ok_and(|_| {
-                                        p.to_string_lossy().to_lowercase().contains(&q)
+                        k.split([
+                            '_', '-', ':', ';', ',', '(', ')', '[', ']', '/', '!', '?',
+                            ' ', // @TODO make separators list optional
+                        ])
+                        .filter(|s| !s.is_empty())
+                        .map(|s| s.trim().to_lowercase())
+                        .all(|q| {
+                            m.info_hash.as_string().to_lowercase().contains(&q)
+                                || m.info
+                                    .name
+                                    .as_ref()
+                                    .is_some_and(|n| n.to_string().to_lowercase().contains(&q))
+                                || m.comment
+                                    .as_ref()
+                                    .is_some_and(|c| c.to_string().to_lowercase().contains(&q))
+                                || m.created_by
+                                    .as_ref()
+                                    .is_some_and(|c| c.to_string().to_lowercase().contains(&q))
+                                || m.publisher
+                                    .as_ref()
+                                    .is_some_and(|p| p.to_string().to_lowercase().contains(&q))
+                                || m.publisher_url
+                                    .as_ref()
+                                    .is_some_and(|u| u.to_string().to_lowercase().contains(&q))
+                                || m.announce
+                                    .as_ref()
+                                    .is_some_and(|a| a.to_string().to_lowercase().contains(&q))
+                                || m.announce_list.iter().any(|l| {
+                                    l.iter().any(|a| a.to_string().to_lowercase().contains(&q))
+                                })
+                                || m.info.files.as_ref().is_some_and(|f| {
+                                    f.iter().any(|f| {
+                                        let mut p = PathBuf::new();
+                                        f.full_path(&mut p).is_ok_and(|_| {
+                                            p.to_string_lossy().to_lowercase().contains(&q)
+                                        })
                                     })
                                 })
-                            })
+                        })
                     })
             {
                 continue;
