@@ -57,6 +57,7 @@ table {
 table td,
 table th {
     padding: 4px 8px;
+    vertical-align: top;
 }
 
 table td:last-child {
