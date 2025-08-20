@@ -11,7 +11,6 @@ mod torrent;
 use config::Config;
 use feed::Feed;
 use meta::Meta;
-use plurify::Plurify;
 use public::{Order, Public, Sort};
 use rocket::{State, http::Status, response::content::RawXml, serde::Serialize};
 use rocket_dyn_templates::{Template, context};
@@ -31,11 +30,11 @@ fn index(
     #[serde(crate = "rocket::serde")]
     struct R {
         created: Option<String>,
-        files: String,
+        files: Option<usize>,
         indexed: String,
         magnet: String,
         scrape: Option<Scrape>,
-        size: String,
+        size: u64,
         torrent: Torrent,
     }
     let (total, torrents) = public
@@ -85,7 +84,7 @@ fn index(
                         indexed: torrent.time.format(&meta.format_time).to_string(),
                         magnet: torrent.magnet(meta.trackers.as_ref()),
                         scrape: scraper.scrape(&torrent.info_hash),
-                        size: torrent.size(),
+                        size: torrent.size,
                         torrent
                     }),
                     Err(e) => {
@@ -94,12 +93,9 @@ fn index(
                     }
                 })
                 .collect::<Vec<R>>(),
-            pagination_totals: if total > 0 { Some(format!(
-                "Page {} / {} ({total} {} total)",
-                page.unwrap_or(1),
-                (total as f64 / public.default_limit as f64).ceil(),
-                total.plurify(&["torrent", "torrents", "torrents"])
-            )) } else { None },
+            page: page.unwrap_or(1),
+            pages: (total as f64 / public.default_limit as f64).ceil(),
+            total,
             search
         },
     ))
@@ -119,7 +115,7 @@ fn info(
             struct F {
                 href: Option<String>,
                 path: String,
-                size: String,
+                size: u64,
             }
             let torrent = Torrent::from_public(&t.bytes, t.time).map_err(|e| {
                 error!("Torrent parse error: `{e}`");
@@ -147,7 +143,7 @@ fn info(
                                 F {
                                     href: public.href(&torrent.info_hash, &p),
                                     path: p,
-                                    size: f.size(),
+                                    size: f.length,
                                 }
                             })
                             .collect::<Vec<F>>()
@@ -155,7 +151,7 @@ fn info(
                     indexed: torrent.time.format(&meta.format_time).to_string(),
                     magnet: torrent.magnet(meta.trackers.as_ref()),
                     scrape: scraper.scrape(&torrent.info_hash),
-                    size: torrent.size(),
+                    size: torrent.size,
                     torrent
                 },
             ))

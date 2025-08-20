@@ -12,7 +12,4 @@ impl File {
             .map(|p| p.to_string_lossy().into())
             .unwrap_or("?".into())
     }
-    pub fn size(&self) -> String {
-        super::size(self.length)
-    }
 }

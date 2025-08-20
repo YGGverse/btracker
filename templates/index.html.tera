@@ -10,8 +10,8 @@
                     <ul>
                         <li><span title="Indexed">{{ row.indexed }}</span></li>
                         {% if row.created %}<li><span title="Created">({{ row.created }})</span></li>{% endif %}
-                        {% if row.size %}<li><span title="Size">{{ row.size }}</span></li>{% endif %}
-                        <li><span title="Files">{{ row.files }}</span></li>
+                        <li><span title="Size">{{ row.size | filesizeformat }}</span></li>
+                        {% if row.files %}<li><span title="Files">{{ row.files }} file{{ row.files | pluralize(plural="s") }}</span></li>{% endif %}
                         {% if row.scrape %}
                             <li><span title="Seeders" class="seeders">{{ row.scrape.seeders }}</span></li>
                             <li><span title="Peers" class="peers">{{ row.scrape.peers }}</span></li>
@@ -29,5 +29,9 @@
     {% endif %}
     {% if next %}<a href="{{ next }}">Next</a>{% endif %}
     {% if back %}<a href="{{ back }}">Back</a>{% endif %}
-    {% if pagination_totals %}<span>{{ pagination_totals }}</span>{% endif %}
+    {% if total %}
+        <span>
+            Page {{ page }} / {{ pages }} ({{ total }} torrent{{ total | pluralize(plural="s") }} total)
+        </span>
+    {% endif %}
 {% endblock content %}
