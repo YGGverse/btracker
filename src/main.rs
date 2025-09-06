@@ -4,14 +4,13 @@ extern crate rocket;
 mod config;
 mod feed;
 mod meta;
-mod public;
 mod scraper;
 mod torrent;
 
+use btracker_fs::public::{Order, Public, Sort};
 use config::Config;
 use feed::Feed;
 use meta::Meta;
-use public::{Order, Public, Sort};
 use rocket::{State, http::Status, response::content::RawXml, serde::Serialize};
 use rocket_dyn_templates::{Template, context};
 use scraper::{Scrape, Scraper};
