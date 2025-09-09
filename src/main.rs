@@ -4,16 +4,16 @@ extern crate rocket;
 mod config;
 mod feed;
 mod meta;
-mod scraper;
+mod scrape;
 mod torrent;
 
 use btracker_fs::public::{Order, Public, Sort};
+use btracker_scrape::Scrape;
 use config::Config;
 use feed::Feed;
 use meta::Meta;
 use rocket::{State, http::Status, response::content::RawXml, serde::Serialize};
 use rocket_dyn_templates::{Template, context};
-use scraper::{Scrape, Scraper};
 use std::str::FromStr;
 use torrent::Torrent;
 
@@ -21,7 +21,7 @@ use torrent::Torrent;
 fn index(
     search: Option<&str>,
     page: Option<usize>,
-    scraper: &State<Scraper>,
+    scrape: &State<Scrape>,
     public: &State<Public>,
     meta: &State<Meta>,
 ) -> Result<Template, Status> {
@@ -32,7 +32,7 @@ fn index(
         files: Option<usize>,
         indexed: String,
         magnet: String,
-        scrape: Option<Scrape>,
+        scrape: Option<scrape::Result>,
         size: usize,
         torrent: Torrent,
     }
@@ -82,7 +82,7 @@ fn index(
                         files: torrent.files(),
                         indexed: torrent.time.format(&meta.format_time).to_string(),
                         magnet: torrent.magnet(meta.trackers.as_ref()),
-                        scrape: scraper.scrape(&torrent.info_hash),
+                        scrape: scrape::get(scrape, torrent.info_hash.0),
                         size: torrent.size as usize, // required by `filesizeformat` impl
                         torrent
                     }),
@@ -104,10 +104,11 @@ fn index(
 fn info(
     info_hash: &str,
     public: &State<Public>,
-    scraper: &State<Scraper>,
+    scrape: &State<Scrape>,
     meta: &State<Meta>,
 ) -> Result<Template, Status> {
-    match public.torrent(librqbit_core::Id20::from_str(info_hash).map_err(|_| Status::NotFound)?) {
+    let i = librqbit_core::Id20::from_str(info_hash).map_err(|_| Status::NotFound)?;
+    match public.torrent(i) {
         Some(t) => {
             #[derive(Serialize)]
             #[serde(crate = "rocket::serde")]
@@ -140,7 +141,7 @@ fn info(
                             .map(|f| {
                                 let p = f.path();
                                 F {
-                                    href: public.href(&torrent.info_hash, &p),
+                                    href: public.href(&torrent.info_hash.as_string(), &p),
                                     path: p,
                                     size: f.length as usize, // required by `filesizeformat` impl
                                 }
@@ -149,7 +150,7 @@ fn info(
                     }),
                     indexed: torrent.time.format(&meta.format_time).to_string(),
                     magnet: torrent.magnet(meta.trackers.as_ref()),
-                    scrape: scraper.scrape(&torrent.info_hash),
+                    scrape: scrape::get(scrape, i.0),
                     size: torrent.size as usize, // required by `filesizeformat` impl
                     torrent
                 },
@@ -195,7 +196,7 @@ fn rocket() -> _ {
     if config.canonical_url.is_none() {
         warn!("Canonical URL option is required for the RSS feed by the specification!") // @TODO
     }
-    let scraper = Scraper::init(
+    let scrape = Scrape::init(
         config
             .scrape
             .map(|u| {
@@ -234,8 +235,8 @@ fn rocket() -> _ {
                 rocket::Config::release_default()
             }
         })
-        .manage(scraper)
-        .manage(Public::init(config.public.clone(), config.list_limit, config.capacity).unwrap())
+        .manage(scrape)
+        .manage(Public::init(&config.public, config.list_limit, config.capacity).unwrap())
         .manage(Meta {
             canonical: config.canonical_url,
             description: config.description,

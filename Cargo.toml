@@ -11,7 +11,8 @@ repository = "https://github.com/yggverse/btracker"
 # homepage = "https://yggverse.github.io"
 
 [dependencies]
-btracker-fs = { version = "0.1", features = ["public"] }
+btracker-fs = { version = "0.2", features = ["public"] }
+btracker-scrape = { version = "0.1" }
 chrono = { version = "0.4.41", features = ["serde"] }
 clap = { version = "4.5", features = ["derive"] }
 librqbit-core = "5.0"

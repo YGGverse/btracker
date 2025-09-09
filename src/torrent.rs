@@ -2,7 +2,10 @@ mod file;
 
 use chrono::{DateTime, Utc};
 use file::File;
-use librqbit_core::torrent_metainfo::{self, TorrentMetaV1Owned};
+use librqbit_core::{
+    Id20,
+    torrent_metainfo::{self, TorrentMetaV1Owned},
+};
 use rocket::serde::Serialize;
 
 #[derive(Clone, Debug, Serialize)]
@@ -13,7 +16,7 @@ pub struct Torrent {
     pub created_by: Option<String>,
     pub creation_date: Option<DateTime<Utc>>,
     pub files: Option<Vec<File>>,
-    pub info_hash: String,
+    pub info_hash: Id20,
     pub is_private: bool,
     pub length: Option<u64>,
     pub name: Option<String>,
@@ -29,7 +32,7 @@ impl Torrent {
         let i: TorrentMetaV1Owned =
             torrent_metainfo::torrent_from_bytes(bytes).map_err(|e| e.to_string())?;
         Ok(Torrent {
-            info_hash: i.info_hash.as_string(),
+            info_hash: i.info_hash,
             announce: i.announce.map(|a| a.to_string()),
             comment: i.comment.map(|c| c.to_string()),
             created_by: i.created_by.map(|c| c.to_string()),
@@ -76,7 +79,7 @@ impl Torrent {
     }
 
     pub fn magnet(&self, trackers: Option<&Vec<url::Url>>) -> String {
-        let mut b = format!("magnet:?xt=urn:btih:{}", self.info_hash);
+        let mut b = format!("magnet:?xt=urn:btih:{}", self.info_hash.as_string());
         if let Some(ref n) = self.name {
             b.push_str("&dn=");
             b.push_str(&urlencoding::encode(n))

@@ -55,9 +55,9 @@ impl Feed {
 
     /// Append `item` to the feed `channel`
     pub fn push(&mut self, torrent: Torrent) {
+        let info_hash = torrent.info_hash.as_string();
         self.buffer.push_str(&format!(
-            "<item><guid>{}</guid><title>{}</title><link>{}</link>",
-            torrent.info_hash,
+            "<item><guid>{info_hash}</guid><title>{}</title><link>{}</link>",
             escape(
                 &torrent
                     .name
@@ -65,7 +65,7 @@ impl Feed {
                     .map(|b| b.to_string())
                     .unwrap_or("?".into()) // @TODO
             ),
-            self.canonical.link(&torrent.info_hash)
+            self.canonical.link(&info_hash)
         ));
 
         self.buffer.push_str("<description>");
