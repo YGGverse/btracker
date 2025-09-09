@@ -16,7 +16,8 @@ pub struct Torrent {
     pub created_by: Option<String>,
     pub creation_date: Option<DateTime<Utc>>,
     pub files: Option<Vec<File>>,
-    pub info_hash: Id20,
+    pub id: Id20,
+    pub info_hash: String,
     pub is_private: bool,
     pub length: Option<u64>,
     pub name: Option<String>,
@@ -32,7 +33,8 @@ impl Torrent {
         let i: TorrentMetaV1Owned =
             torrent_metainfo::torrent_from_bytes(bytes).map_err(|e| e.to_string())?;
         Ok(Torrent {
-            info_hash: i.info_hash,
+            id: i.info_hash,
+            info_hash: i.info_hash.as_string(),
             announce: i.announce.map(|a| a.to_string()),
             comment: i.comment.map(|c| c.to_string()),
             created_by: i.created_by.map(|c| c.to_string()),
@@ -79,7 +81,7 @@ impl Torrent {
     }
 
     pub fn magnet(&self, trackers: Option<&Vec<url::Url>>) -> String {
-        let mut b = format!("magnet:?xt=urn:btih:{}", self.info_hash.as_string());
+        let mut b = format!("magnet:?xt=urn:btih:{}", self.info_hash);
         if let Some(ref n) = self.name {
             b.push_str("&dn=");
             b.push_str(&urlencoding::encode(n))

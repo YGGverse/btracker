@@ -82,7 +82,7 @@ fn index(
                         files: torrent.files(),
                         indexed: torrent.time.format(&meta.format_time).to_string(),
                         magnet: torrent.magnet(meta.trackers.as_ref()),
-                        scrape: scrape::get(scrape, torrent.info_hash.0),
+                        scrape: scrape::get(scrape, torrent.id.0),
                         size: torrent.size as usize, // required by `filesizeformat` impl
                         torrent
                     }),
@@ -141,7 +141,7 @@ fn info(
                             .map(|f| {
                                 let p = f.path();
                                 F {
-                                    href: public.href(&torrent.info_hash.as_string(), &p),
+                                    href: public.href(&torrent.info_hash, &p),
                                     path: p,
                                     size: f.length as usize, // required by `filesizeformat` impl
                                 }
