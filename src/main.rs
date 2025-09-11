@@ -33,7 +33,7 @@ fn index(
         indexed: String,
         magnet: String,
         scrape: Option<scrape::Result>,
-        size: usize,
+        size: String,
         torrent: Torrent,
     }
     let (total, torrents) = public
@@ -83,7 +83,7 @@ fn index(
                         indexed: torrent.time.format(&meta.format_time).to_string(),
                         magnet: torrent.magnet(meta.trackers.as_ref()),
                         scrape: scrape::get(scrape, torrent.id.0),
-                        size: torrent.size as usize, // required by `filesizeformat` impl
+                        size: torrent.size(),
                         torrent
                     }),
                     Err(e) => {
@@ -115,7 +115,7 @@ fn info(
             struct F {
                 href: Option<String>,
                 path: String,
-                size: usize,
+                size: String,
             }
             let torrent = Torrent::from_public(&t.bytes, t.time).map_err(|e| {
                 error!("Torrent parse error: `{e}`");
@@ -143,7 +143,7 @@ fn info(
                                 F {
                                     href: public.href(&torrent.info_hash, &p),
                                     path: p,
-                                    size: f.length as usize, // required by `filesizeformat` impl
+                                    size: f.size(),
                                 }
                             })
                             .collect::<Vec<F>>()
@@ -151,7 +151,7 @@ fn info(
                     indexed: torrent.time.format(&meta.format_time).to_string(),
                     magnet: torrent.magnet(meta.trackers.as_ref()),
                     scrape: scrape::get(scrape, i.0),
-                    size: torrent.size as usize, // required by `filesizeformat` impl
+                    size: torrent.size(),
                     torrent
                 },
             ))

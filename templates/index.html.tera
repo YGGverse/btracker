@@ -10,7 +10,7 @@
                     <ul>
                         <li><span title="Indexed">{{ row.indexed }}</span></li>
                         {% if row.created %}<li><span title="Created">({{ row.created }})</span></li>{% endif %}
-                        <li><span title="Size">{{ row.size | filesizeformat }}</span></li>
+                        <li><span title="Size">{{ row.size }}</span></li>
                         {% if row.files %}<li><span title="Files">{{ row.files }} file{{ row.files | pluralize(plural="s") }}</span></li>{% endif %}
                         {% if row.scrape %}
                             <li><span title="Seeders" class="seeders">{{ row.scrape.seeders }}</span></li>

@@ -9,7 +9,7 @@
             {% if created %}
                 <li><span title="Created">({{ created }})</span></li>
             {% endif %}
-            <li><span title="Size">{{ size | filesizeformat }}</span></li>
+            <li><span title="Size">{{ size }}</span></li>
             {% if files_total %}
                 <li><span title="Files">{{ files_total }} file{{ files_total | pluralize(plural="s") }}</span></li>
             {% endif %}
@@ -42,7 +42,7 @@
                                 {{ file.path }}
                             {% endif %}
                         </td>
-                        <td>{{ file.size | filesizeformat }}</td>
+                        <td>{{ file.size }}</td>
                     </tr>
                 {% endfor %}
             </tbody>
