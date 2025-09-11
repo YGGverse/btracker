@@ -96,3 +96,7 @@ btracker --public=/path/to/aquatic-crawler/preload\
 ``` bash
 btracker --help
 ```
+
+## See also
+
+* [btracker-gemini](https://github.com/yggverse/btracker-gemini) - βtracker implementation for the [Gemini protocol](https://geminiprotocol.net)
