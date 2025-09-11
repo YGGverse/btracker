@@ -17,7 +17,7 @@ See the [Wiki](https://github.com/YGGverse/btracker/wiki/Screenshots) page
 
 ## Roadmap
 
-* [ ] Listing (index) page
+* [x] Listing (index) page
     * [x] Basic metainfo
     * [x] Pagination
     * [x] Search
@@ -35,7 +35,7 @@ See the [Wiki](https://github.com/YGGverse/btracker/wiki/Screenshots) page
         * [ ] relevance ranking
         * [ ] fast in-memory index
         * [ ] search options form
-    * [ ] sort order (time indexed by default)
+    * [ ] optional sort order (time indexed by default)
 * [x] Details page
     * [x] files
         * [x] clickable content preview
@@ -47,11 +47,11 @@ See the [Wiki](https://github.com/YGGverse/btracker/wiki/Screenshots) page
     * [ ] publisher URL
     * [ ] announce
     * [ ] announce list
-* [ ] Common features
-    * [ ] scrape peers/seeders/leechers
+* [x] Common features
+    * [x] scrape peers/seeders/leechers (by the [btracker-scrape](https://github.com/yggverse/btracker-scrape))
         * [x] UDP
         * [ ] TCP
-    * [ ] download
+    * [x] download
         * [x] magnet link
         * [ ] torrent file
             * [x] from the `public` location
