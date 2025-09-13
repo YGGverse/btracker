@@ -7,7 +7,7 @@ mod meta;
 mod scrape;
 mod torrent;
 
-use btracker_fs::public::{Order, Public, Sort};
+use btracker_fs::public::{Order, Sort, Storage};
 use btracker_scrape::Scrape;
 use config::Config;
 use feed::Feed;
@@ -22,7 +22,7 @@ fn index(
     search: Option<&str>,
     page: Option<usize>,
     scrape: &State<Scrape>,
-    public: &State<Public>,
+    storage: &State<Storage>,
     meta: &State<Meta>,
 ) -> Result<Template, Status> {
     #[derive(Serialize)]
@@ -36,12 +36,12 @@ fn index(
         size: String,
         torrent: Torrent,
     }
-    let (total, torrents) = public
+    let (total, torrents) = storage
         .torrents(
             search,
             Some((Sort::Modified, Order::Desc)),
-            page.map(|p| if p > 0 { p - 1 } else { p } * public.default_limit),
-            Some(public.default_limit),
+            page.map(|p| if p > 0 { p - 1 } else { p } * storage.default_limit),
+            Some(storage.default_limit),
         )
         .map_err(|e| {
             error!("Torrents public storage read error: `{e}`");
@@ -72,7 +72,7 @@ fn index(
             },
             meta: meta.inner(),
             back: page.map(|p| uri!(index(search, if p > 2 { Some(p - 1) } else { None }))),
-            next: if page.unwrap_or(1) * public.default_limit >= total { None }
+            next: if page.unwrap_or(1) * storage.default_limit >= total { None }
                     else { Some(uri!(index(search, Some(page.map_or(2, |p| p + 1))))) },
             rows: torrents
                 .into_iter()
@@ -93,7 +93,7 @@ fn index(
                 })
                 .collect::<Vec<R>>(),
             page: page.unwrap_or(1),
-            pages: (total as f64 / public.default_limit as f64).ceil(),
+            pages: (total as f64 / storage.default_limit as f64).ceil(),
             total,
             search
         },
@@ -103,12 +103,12 @@ fn index(
 #[get("/<info_hash>")]
 fn info(
     info_hash: &str,
-    public: &State<Public>,
+    storage: &State<Storage>,
     scrape: &State<Scrape>,
     meta: &State<Meta>,
 ) -> Result<Template, Status> {
     let i = librqbit_core::Id20::from_str(info_hash).map_err(|_| Status::NotFound)?;
-    match public.torrent(i) {
+    match storage.torrent(i) {
         Some(t) => {
             #[derive(Serialize)]
             #[serde(crate = "rocket::serde")]
@@ -141,7 +141,7 @@ fn info(
                             .map(|f| {
                                 let p = f.path();
                                 F {
-                                    href: public.href(&torrent.info_hash, &p),
+                                    href: storage.href(&torrent.info_hash, &p),
                                     path: p,
                                     size: f.size(),
                                 }
@@ -161,22 +161,22 @@ fn info(
 }
 
 #[get("/rss")]
-fn rss(meta: &State<Meta>, public: &State<Public>) -> Result<RawXml<String>, Status> {
+fn rss(meta: &State<Meta>, storage: &State<Storage>) -> Result<RawXml<String>, Status> {
     let mut f = Feed::new(
         &meta.title,
         meta.description.as_deref(),
         meta.canonical.clone(),
         1024, // @TODO
     );
-    for t in public
+    for t in storage
         .torrents(
             None,
             Some((Sort::Modified, Order::Desc)),
             None,
-            Some(public.default_limit),
+            Some(storage.default_limit),
         )
         .map_err(|e| {
-            error!("Torrent public storage read error: `{e}`");
+            error!("Torrent storage read error: `{e}`");
             Status::InternalServerError
         })?
         .1
@@ -236,7 +236,7 @@ fn rocket() -> _ {
             }
         })
         .manage(scrape)
-        .manage(Public::init(&config.public, config.list_limit, config.capacity).unwrap())
+        .manage(Storage::init(&config.public, config.list_limit, config.capacity).unwrap())
         .manage(Meta {
             canonical: config.canonical_url,
             description: config.description,
