@@ -25,6 +25,8 @@
         <footer>
             <a href="/rss">RSS</a> |
             <a href="https://github.com/yggverse/btracker" title="v{{ meta.version }}">GitHub</a>
+            <div><span>Donate (XMR)</span></div>
+            <code>87CzQdAh7Ly5Rj9c1c9Fby3g2uMBCbXHh9GjKkxRhTGnbArpZsXB6XhXgYAZ4TBC4p5J6tigzsNXkNhkwZSnbJjWJcZBCgi</code>
         </footer>
     </body>
 </html>

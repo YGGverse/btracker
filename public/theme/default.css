@@ -244,3 +244,31 @@ footer {
     margin: 16px auto 36px;
     text-align: center;
 }
+
+/* donate */
+footer > div {
+    margin-bottom: -8px;
+    margin-top: 16px;
+    position: relative;
+    z-index: 2;
+}
+
+footer > div > span {
+    background: var(--background);
+    color: var(--separator);
+    font-size: smaller;
+    margin-bottom: -8px;
+    margin-top: 16px;
+    padding: 0 8px;
+}
+
+footer > code {
+    border-radius: 3px;
+    border: 1px var(--separator) solid;
+    display: inline-block;
+    font-size: smaller;
+    opacity: 0.7;
+    padding: 8px;
+    position: relative;
+    z-index: 1;
+}
