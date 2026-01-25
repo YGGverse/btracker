@@ -10,11 +10,6 @@
 
 See the [Wiki](https://github.com/YGGverse/btracker/wiki/Screenshots) page
 
-## Live
-
-* `http://[302:68d0:f0d5:b88d::fdb]` - [Yggdrasil](https://yggdrasil-network.github.io/) only peers BitTorrent tracker
-    * [http://tracker.ygg](http://tracker.ygg/) - [Alfis DNS](https://github.com/Revertron/Alfis) alias
-
 ## Roadmap
 
 * [x] Listing (index) page
