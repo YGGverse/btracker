@@ -11,16 +11,16 @@ repository = "https://github.com/yggverse/btracker"
 # homepage = "https://yggverse.github.io"
 
 [dependencies]
-btracker-fs = { version = "0.3", features = ["public"] }
-btracker-scrape = { version = "0.1" }
-chrono = { version = "0.4.41", features = ["serde"] }
-clap = { version = "4.5", features = ["derive"] }
-librqbit-core = "5.0"
-rand = "0.9"
-rocket = "0.5"
-rocket_dyn_templates = { version = "0.2", features = ["tera"] }
-url = { version = "2.5", features = ["serde"] }
-urlencoding = "2.1"
+btracker-fs = { version = "0.3.1", features = ["public"] }
+btracker-scrape = { version = "0.1.0" }
+chrono = { version = "0.4.44", features = ["serde"] }
+clap = { version = "4.6.1", features = ["derive"] }
+librqbit-core = "5.0.0"
+rand = "0.10.1"
+rocket = "0.5.1"
+rocket_dyn_templates = { version = "0.2.0", features = ["tera"] }
+url = { version = "2.5.8", features = ["serde"] }
+urlencoding = "2.1.3"
 
 # development
 # [patch.crates-io]
