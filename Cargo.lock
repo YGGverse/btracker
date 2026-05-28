@@ -195,7 +195,7 @@ dependencies = [
 [[package]]
 name = "btracker-fs"
 version = "0.4.0"
-source = "git+https://github.com/yggverse/btracker-fs.git#689c8e0a8776317433477a5483ac54bd556b6618"
+source = "git+https://github.com/yggverse/btracker-fs.git#cdff884052ba4372db5f15f3488e434194cc678a"
 dependencies = [
  "chrono",
  "librqbit-core",
