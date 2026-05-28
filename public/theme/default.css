@@ -230,8 +230,13 @@ main > div > div > div > a {
     width: 16px;
 }
 
+main > div > div > div > a.torrent {
+    background-image: url('default/torrent.svg');
+}
+
 main > div > div > div > a.magnet {
     background-image: url('default/magnet.svg');
+    margin-right: 8px;
 }
 
 /* pagination info */

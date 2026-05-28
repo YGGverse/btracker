@@ -3,6 +3,7 @@ extern crate rocket;
 
 mod config;
 mod feed;
+mod info_hash;
 mod meta;
 mod scrape;
 mod torrent;
@@ -11,10 +12,10 @@ use btracker_fs::public::{Order, Sort, Storage};
 use btracker_scrape::Scrape;
 use config::Config;
 use feed::Feed;
+use info_hash::InfoHash;
 use meta::Meta;
 use rocket::{State, http::Status, response::content::RawXml, serde::Serialize};
 use rocket_dyn_templates::{Template, context};
-use std::str::FromStr;
 use torrent::Torrent;
 
 #[get("/?<search>&<page>")]
@@ -32,9 +33,10 @@ fn index(
         files: Option<usize>,
         indexed: String,
         magnet: String,
+        torrent: String,
         scrape: Option<scrape::Result>,
         size: String,
-        torrent: Torrent,
+        this: Torrent,
     }
     let (total, torrents) = storage
         .torrents(
@@ -77,14 +79,15 @@ fn index(
             rows: torrents
                 .into_iter()
                 .filter_map(|t| match Torrent::from_public(&t.bytes, t.time) {
-                    Ok(torrent) => Some(R {
-                        created: torrent.creation_date.map(|t| t.format(&meta.format_time).to_string()),
-                        files: torrent.files(),
-                        indexed: torrent.time.format(&meta.format_time).to_string(),
-                        magnet: torrent.magnet(meta.trackers.as_ref()),
-                        scrape: scrape::get(scrape, torrent.id.0),
-                        size: torrent.size(),
-                        torrent
+                    Ok(this) => Some(R {
+                        created: this.creation_date.map(|t| t.format(&meta.format_time).to_string()),
+                        files: this.files(),
+                        indexed: this.time.format(&meta.format_time).to_string(),
+                        magnet: this.magnet(meta.trackers.as_ref()),
+                        torrent: this.torrent(), // @TODO customize trackers
+                        scrape: scrape::get(scrape, this.id.0),
+                        size: this.size(),
+                        this
                     }),
                     Err(e) => {
                         error!("Torrent storage read error: `{e}`");
@@ -102,13 +105,12 @@ fn index(
 
 #[get("/<info_hash>")]
 fn info(
-    info_hash: &str,
+    info_hash: InfoHash,
     storage: &State<Storage>,
     scrape: &State<Scrape>,
     meta: &State<Meta>,
 ) -> Result<Template, Status> {
-    let i = librqbit_core::Id20::from_str(info_hash).map_err(|_| Status::NotFound)?;
-    match storage.torrent(i) {
+    match storage.torrent(info_hash.id20()) {
         Some(t) => {
             #[derive(Serialize)]
             #[serde(crate = "rocket::serde")]
@@ -117,7 +119,7 @@ fn info(
                 path: String,
                 size: String,
             }
-            let torrent = Torrent::from_public(&t.bytes, t.time).map_err(|e| {
+            let this = Torrent::from_public(&t.bytes, t.time).map_err(|e| {
                 error!("Torrent parse error: `{e}`");
                 Status::InternalServerError
             })?;
@@ -126,7 +128,7 @@ fn info(
                 context! {
                     title: {
                         let mut t = String::new();
-                        if let Some(ref name) = torrent.name {
+                        if let Some(ref name) = this.name {
                             t.push_str(name);
                             t.push_str(S)
                         }
@@ -134,25 +136,26 @@ fn info(
                         t
                     },
                     meta: meta.inner(),
-                    created: torrent.creation_date.map(|t| t.format(&meta.format_time).to_string()),
-                    files_total: torrent.files(),
-                    files_list: torrent.files.as_ref().map(|f| {
+                    created: this.creation_date.map(|t| t.format(&meta.format_time).to_string()),
+                    files_total: this.files(),
+                    files_list: this.files.as_ref().map(|f| {
                         f.iter()
                             .map(|f| {
                                 let p = f.path();
                                 F {
-                                    href: storage.href(&torrent.info_hash, &p),
+                                    href: storage.href(&this.info_hash, &p),
                                     path: p,
                                     size: f.size(),
                                 }
                             })
                             .collect::<Vec<F>>()
                     }),
-                    indexed: torrent.time.format(&meta.format_time).to_string(),
-                    magnet: torrent.magnet(meta.trackers.as_ref()),
-                    scrape: scrape::get(scrape, i.0),
-                    size: torrent.size(),
-                    torrent
+                    indexed: this.time.format(&meta.format_time).to_string(),
+                    magnet: this.magnet(meta.trackers.as_ref()),
+                    torrent: this.torrent(), // @TODO customize trackers
+                    scrape: scrape::get(scrape, info_hash.bytes20()),
+                    size: this.size(),
+                    this
                 },
             ))
         }

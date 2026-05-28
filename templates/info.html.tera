@@ -1,8 +1,8 @@
 {% extends "layout/default" %}
 {% block content %}
 <div>
-    <h1>{% if torrent.name %}{{ torrent.name }}{% else %}{{ torrent.info_hash }}{% endif %}</h1>
-    {% if torrent.comment %}<p>{{ torrent.comment }}</p>{% endif %}
+    <h1>{% if this.name %}{{ this.name }}{% else %}{{ this.info_hash }}{% endif %}</h1>
+    {% if this.comment %}<p>{{ this.comment }}</p>{% endif %}
     <div>
         <ul>
             <li><span title="Indexed">{{ indexed }}</span></li>
@@ -21,6 +21,7 @@
         </ul>
         <div>
             <a rel="nofollow" href="{{ magnet }}" title="Get magnet" class="action magnet"></a>
+            <a rel="nofollow" href="{{ torrent }}" title="Get torrent" class="action torrent"></a>
         </div>
     </div>
     {% if files_list %}

@@ -98,6 +98,10 @@ impl Torrent {
         }
         b
     }
+
+    pub fn torrent(&self) -> String {
+        format!("{}.torrent", self.info_hash)
+    }
 }
 
 fn size(value: u64) -> String {
