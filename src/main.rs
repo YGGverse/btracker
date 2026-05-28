@@ -53,12 +53,11 @@ fn index(
             {
                 let si = scrape_index.clone();
                 move |id| {
-                    search.is_some()
-                        || scrape::get(scrape, id.0).is_none_or(|s| {
-                            let is_active = s.leechers > 0 || s.peers > 0 || s.seeders > 0;
-                            assert!(si.borrow_mut().insert(id, s).is_none());
-                            is_active
-                        })
+                    scrape::get(scrape, id.0).is_none_or(|s| {
+                        let is_active = s.leechers > 0 || s.peers > 0 || s.seeders > 0;
+                        assert!(si.borrow_mut().insert(id, s).is_none());
+                        search.is_some() || is_active
+                    })
                 }
             },
         )
