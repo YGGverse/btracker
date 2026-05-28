@@ -48,9 +48,7 @@ See the [Wiki](https://github.com/YGGverse/btracker/wiki/Screenshots) page
         * [ ] TCP
     * [x] download
         * [x] magnet link
-        * [ ] torrent file
-            * [x] from the `public` location
-            * [ ] filtered trackers binary
+        * [x] torrent file
 * [x] RSS feed
 
 ## Install
