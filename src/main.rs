@@ -26,6 +26,8 @@ fn index(
     storage: &State<Storage>,
     meta: &State<Meta>,
 ) -> Result<Template, Status> {
+    use std::{cell::RefCell, collections::HashMap, rc::Rc};
+
     #[derive(Serialize)]
     #[serde(crate = "rocket::serde")]
     struct R {
@@ -38,17 +40,32 @@ fn index(
         size: String,
         this: Torrent,
     }
-    let (total, torrents) = storage
+
+    let scrape_index: Rc<RefCell<HashMap<librqbit_core::Id20, scrape::Result>>> =
+        Rc::new(RefCell::new(HashMap::new())); // scrape info-hashes once
+
+    let result = storage
         .torrents(
             search,
             Some((Sort::Modified, Order::Desc)),
             page.map(|p| if p > 0 { p - 1 } else { p } * storage.default_limit),
             Some(storage.default_limit),
+            {
+                let si = scrape_index.clone();
+                move |id| {
+                    scrape::get(scrape, id.0).is_none_or(|s| {
+                        let is_active = s.leechers > 0 || s.peers > 0 || s.seeders > 0;
+                        assert!(si.borrow_mut().insert(id, s).is_none());
+                        search.is_some() || is_active
+                    })
+                }
+            },
         )
         .map_err(|e| {
             error!("Torrents public storage read error: `{e}`");
             Status::InternalServerError
         })?;
+
     Ok(Template::render(
         "index",
         context! {
@@ -74,9 +91,9 @@ fn index(
             },
             meta: meta.inner(),
             back: page.map(|p| uri!(index(search, if p > 2 { Some(p - 1) } else { None }))),
-            next: if page.unwrap_or(1) * storage.default_limit >= total { None }
+            next: if page.unwrap_or(1) * storage.default_limit >= result.visible { None }
                     else { Some(uri!(index(search, Some(page.map_or(2, |p| p + 1))))) },
-            rows: torrents
+            rows: result.list
                 .into_iter()
                 .filter_map(|t| match Torrent::from_public(&t.bytes, t.time) {
                     Ok(this) => Some(R {
@@ -85,7 +102,7 @@ fn index(
                         indexed: this.time.format(&meta.format_time).to_string(),
                         magnet: this.magnet(meta.trackers.as_ref()),
                         torrent: this.torrent(), // @TODO customize trackers
-                        scrape: scrape::get(scrape, this.id.0),
+                        scrape: scrape_index.borrow_mut().remove(&this.id),
                         size: this.size(),
                         this
                     }),
@@ -96,8 +113,9 @@ fn index(
                 })
                 .collect::<Vec<R>>(),
             page: page.unwrap_or(1),
-            pages: (total as f64 / storage.default_limit as f64).ceil(),
-            total,
+            pages: (result.visible as f64 / storage.default_limit as f64).ceil(),
+            total: result.total,
+            visible: result.visible,
             search
         },
     ))
@@ -164,7 +182,11 @@ fn info(
 }
 
 #[get("/rss")]
-fn rss(meta: &State<Meta>, storage: &State<Storage>) -> Result<RawXml<String>, Status> {
+fn rss(
+    meta: &State<Meta>,
+    scrape: &State<Scrape>,
+    storage: &State<Storage>,
+) -> Result<RawXml<String>, Status> {
     let mut f = Feed::new(
         &meta.title,
         meta.description.as_deref(),
@@ -177,12 +199,16 @@ fn rss(meta: &State<Meta>, storage: &State<Storage>) -> Result<RawXml<String>, S
             Some((Sort::Modified, Order::Desc)),
             None,
             Some(storage.default_limit),
+            |id| {
+                scrape::get(scrape, id.0)
+                    .is_some_and(|s| s.leechers > 0 || s.peers > 0 || s.seeders > 0)
+            },
         )
         .map_err(|e| {
             error!("Torrent storage read error: `{e}`");
             Status::InternalServerError
         })?
-        .1
+        .list
     {
         f.push(Torrent::from_public(&t.bytes, t.time).map_err(|e| {
             error!("Torrent parse error: `{e}`");

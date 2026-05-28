@@ -32,7 +32,11 @@
     {% if back %}<a href="{{ back }}">Back</a>{% endif %}
     {% if total %}
         <span>
-            Page {{ page }} / {{ pages }} ({{ total }} torrent{{ total | pluralize(plural="s") }} total)
+            {% if search %}
+                Page {{ page }} / {{ pages }} ({{ total }} total)
+            {% else %}
+                Page {{ page }} / {{ pages }} ({{ visible }} visible, {{ total }} total)
+            {% endif %}
         </span>
     {% endif %}
 {% endblock content %}
