@@ -32,7 +32,7 @@
     {% if back %}<a href="{{ back }}">Back</a>{% endif %}
     {% if total %}
         <span>
-            Page {{ page }} / {{ pages }} ({% if is_search %}{{ total }} total{% else %}{{ visible }} visible, {{ total }} total{% endif %})
+            Page {{ page }} / {{ pages }} ({% if is_search %}{{ total }} total{% else %}{{ visible }} active, {{ total }} total{% endif %})
         </span>
     {% endif %}
 {% endblock content %}
