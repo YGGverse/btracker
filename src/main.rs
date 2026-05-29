@@ -116,6 +116,7 @@ fn index(
             pages: (result.visible as f64 / storage.default_limit as f64).ceil(),
             total: result.total,
             visible: result.visible,
+            is_search: search.is_some(),
             search
         },
     ))
