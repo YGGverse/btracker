@@ -1,0 +1,504 @@
+mod config;
+mod format;
+mod route;
+
+use anyhow::Result;
+use btracker_fs::public::{Order, Sort, Storage, Torrent};
+use btracker_scrape::*;
+use config::Config;
+use librqbit_core::torrent_metainfo::{TorrentMetaV1Owned, torrent_from_bytes};
+use log::*;
+use native_tls::{HandshakeError, Identity, TlsAcceptor, TlsStream};
+use std::{
+    fs::File,
+    io::{Read, Write},
+    net::{IpAddr, SocketAddr, TcpListener, TcpStream},
+    path::PathBuf,
+    sync::Arc,
+    thread,
+};
+
+fn main() -> Result<()> {
+    use chrono::Local;
+    use clap::Parser;
+
+    if std::env::var("RUST_LOG").is_ok() {
+        use tracing_subscriber::{EnvFilter, fmt::*};
+        struct T;
+        impl time::FormatTime for T {
+            fn format_time(&self, w: &mut format::Writer<'_>) -> std::fmt::Result {
+                write!(w, "{}", Local::now())
+            }
+        }
+        fmt()
+            .with_timer(T)
+            .with_env_filter(EnvFilter::from_default_env())
+            .init()
+    }
+
+    let config = Config::parse();
+    let state = Arc::new(State {
+        public: Storage::init(&config.storage, config.limit, config.capacity).unwrap(),
+        scrape: Scrape::init(
+            config
+                .tracker
+                .as_ref()
+                .map(|u| {
+                    u.iter()
+                        .map(|url| {
+                            use std::str::FromStr;
+                            if url.scheme() == "tcp" {
+                                todo!("TCP scrape is not implemented")
+                            }
+                            if url.scheme() != "udp" {
+                                todo!("Scheme `{}` is not supported", url.scheme())
+                            }
+                            SocketAddr::new(
+                                IpAddr::from_str(
+                                    url.host_str()
+                                        .expect("Required valid host value")
+                                        .trim_start_matches('[')
+                                        .trim_end_matches(']'),
+                                )
+                                .unwrap(),
+                                url.port().expect("Required valid port value"),
+                            )
+                        })
+                        .collect()
+                })
+                .map(|a| (config.udp, a)),
+        ),
+        format_date: config.format_date,
+        name: config.name,
+        description: config.description,
+        tracker: config.tracker,
+    });
+
+    // https://geminiprotocol.net/docs/protocol-specification.gmi#the-use-of-tls
+    let acceptor = TlsAcceptor::new(Identity::from_pkcs12(
+        &{
+            let mut buffer = vec![];
+            File::open(&config.identity)?.read_to_end(&mut buffer)?;
+            buffer
+        },
+        &config.password,
+    )?)?;
+
+    let listener = TcpListener::bind(config.bind)?;
+
+    info!("Server started on `{}`", config.bind);
+
+    for stream in listener.incoming() {
+        match stream {
+            Ok(stream) => {
+                thread::spawn({
+                    let state = state.clone();
+                    let peer = stream.peer_addr()?;
+                    let connection = acceptor.accept(stream);
+                    move || handle(state, peer, connection)
+                });
+            }
+            Err(e) => error!("{e}"),
+        }
+    }
+    Ok(())
+}
+
+fn handle(
+    state: Arc<State>,
+    peer: SocketAddr,
+    connection: Result<TlsStream<TcpStream>, HandshakeError<TcpStream>>,
+) {
+    use titanite::*;
+    debug!("Incoming connection from: `{peer}`");
+    match connection {
+        Ok(mut stream) => {
+            // server should work with large files without memory overload,
+            // because of that, incoming data read partially, using chunks;
+            // collect header bytes first to route the request by its type.
+            let mut header_buffer = Vec::with_capacity(HEADER_MAX_LEN);
+            loop {
+                let mut header_chunk = vec![0];
+                match stream.read(&mut header_chunk) {
+                    Ok(0) => warn!("Peer `{peer}` closed connection."),
+                    Ok(l) => {
+                        // validate header buffer, break on its length reached protocol limits
+                        if header_buffer.len() + l > HEADER_MAX_LEN {
+                            return send(
+                                &response::failure::permanent::BadRequest {
+                                    message: Some("Bad request".to_string()),
+                                }
+                                .into_bytes(),
+                                &mut stream,
+                                |result| match result {
+                                    Ok(()) => warn!("Bad request from peer `{peer}`"),
+                                    Err(e) => error!("Send packet to peer `{peer}` failed: {e}"),
+                                },
+                            );
+                        }
+
+                        // take chunk bytes at this point
+                        header_buffer.extend(header_chunk);
+
+                        // ending header byte received
+                        if header_buffer.last().is_some_and(|&b| b == b'\n') {
+                            // header bytes contain valid Gemini **request**
+                            if let Ok(request) = request::Gemini::from_bytes(&header_buffer) {
+                                return response(request, &state, &peer, &mut stream);
+                            }
+
+                            // header bytes received but yet could not be parsed,
+                            // complete with request failure
+                            send(
+                                &response::failure::permanent::BadRequest {
+                                    message: Some("Bad request".to_string()),
+                                }
+                                .into_bytes(),
+                                &mut stream,
+                                |result| match result {
+                                    Ok(()) => warn!("Bad request from peer `{peer}`"),
+                                    Err(e) => error!("Send packet to peer `{peer}` failed: {e}"),
+                                },
+                            )
+                        }
+                    }
+                    Err(e) => send(
+                        &response::failure::permanent::BadRequest {
+                            message: Some("Bad request".to_string()),
+                        }
+                        .into_bytes(),
+                        &mut stream,
+                        |result| match result {
+                            Ok(()) => warn!("Send failure response to peer `{peer}`: {e}"),
+                            Err(e) => error!("Send packet to peer `{peer}` failed: {e}"),
+                        },
+                    ),
+                }
+            }
+        }
+        Err(e) => warn!("Handshake issue for peer `{peer}`: {e}"),
+    }
+}
+
+fn response(
+    request: titanite::request::Gemini,
+    state: &State,
+    peer: &SocketAddr,
+    stream: &mut TlsStream<TcpStream>,
+) {
+    use route::Route;
+    use titanite::response::*;
+    debug!("Incoming request from `{peer}` to `{}`", request.url.path());
+    send(
+        &match Route::from_url(&request.url, &state.public) {
+            Route::File(ref path) => success::Default {
+                data: &std::fs::read(path).unwrap(),
+                meta: success::default::Meta {
+                    mime: match path.extension() {
+                        Some(extension) => {
+                            let e = extension.to_ascii_lowercase();
+                            if e == "jpeg" || e == "jpg" {
+                                "image/jpeg"
+                            } else if e == "gif" {
+                                "image/gif"
+                            } else if e == "png" {
+                                "image/png"
+                            } else if e == "webp" {
+                                "image/webp"
+                            } else if e == "txt" || e == "log" {
+                                "text/plain"
+                            } else if e == "gemini" || e == "gmi" {
+                                "text/gemini"
+                            } else {
+                                todo!()
+                            }
+                        }
+                        None => todo!(),
+                    }
+                    .to_string(),
+                },
+            }
+            .into_bytes(),
+            Route::List { page, keyword } => match list(state, keyword.as_deref(), page) {
+                Ok(data) => success::Default {
+                    data: data.as_bytes(),
+                    meta: success::default::Meta {
+                        mime: "text/gemini".to_string(),
+                    },
+                }
+                .into_bytes(),
+                Err(e) => {
+                    error!("Internal server error on handle peer `{peer}` request: `{e}`");
+                    failure::temporary::General {
+                        message: Some("Internal server error".to_string()),
+                    }
+                    .into_bytes()
+                }
+            },
+            Route::Search => Input::Default(input::Default {
+                message: Some("Keyword, file, hash...".into()),
+            })
+            .into_bytes(),
+            Route::Info(id) => match state.public.torrent(id) {
+                Some(torrent) => match info(state, torrent) {
+                    Ok(data) => success::Default {
+                        data: data.as_bytes(),
+                        meta: success::default::Meta {
+                            mime: "text/gemini".to_string(),
+                        },
+                    }
+                    .into_bytes(),
+                    Err(e) => {
+                        error!("Internal server error on handle peer `{peer}` request: `{e}`");
+                        failure::temporary::General {
+                            message: Some("Internal server error".to_string()),
+                        }
+                        .into_bytes()
+                    }
+                },
+                None => {
+                    warn!(
+                        "Requested torrent `{}` not found by peer `{peer}`",
+                        request.url.as_str()
+                    );
+                    Failure::Permanent(failure::Permanent::NotFound(failure::permanent::NotFound {
+                        message: None,
+                    }))
+                    .into_bytes()
+                }
+            },
+            Route::NotFound => {
+                warn!(
+                    "Requested resource `{}` not found by peer `{peer}`",
+                    request.url.as_str()
+                );
+                Failure::Permanent(failure::Permanent::NotFound(failure::permanent::NotFound {
+                    message: None,
+                }))
+                .into_bytes()
+            }
+        },
+        stream,
+        |result| {
+            if let Err(e) = result {
+                error!("Internal server error on handle peer `{peer}` request: `{e}`")
+            }
+        },
+    )
+}
+
+fn send(data: &[u8], stream: &mut TlsStream<TcpStream>, callback: impl FnOnce(Result<()>)) {
+    fn close(stream: &mut TlsStream<TcpStream>) -> Result<()> {
+        stream.flush()?;
+        // close connection gracefully
+        // https://geminiprotocol.net/docs/protocol-specification.gmi#closing-connections
+        stream.shutdown()?;
+        Ok(())
+    }
+    callback((|| {
+        stream.write_all(data)?;
+        close(stream)?;
+        Ok(())
+    })());
+}
+
+fn list(state: &State, keyword: Option<&str>, page: Option<usize>) -> Result<String> {
+    use plurify::Plurify;
+
+    /// format search keyword as the pagination query
+    fn query(keyword: Option<&str>) -> String {
+        keyword.map(|k| format!("?{}", k)).unwrap_or_default()
+    }
+
+    let (total, torrents) = state.public.torrents(
+        keyword,
+        Some((Sort::Modified, Order::Desc)),
+        page.map(|p| if p > 0 { p - 1 } else { p } * state.public.default_limit),
+        Some(state.public.default_limit),
+    )?;
+
+    let mut b = Vec::new();
+
+    b.push(format!("# {}\n", {
+        let mut h = String::new();
+
+        if let Some(k) = keyword {
+            h.push_str(k);
+            h.push_str(" • ");
+        }
+
+        if let Some(p) = page
+            && p > 1
+        {
+            h.push_str(&format!("Page {p} • "));
+        }
+
+        h.push_str(&state.name);
+        h
+    }));
+
+    if let Some(ref description) = state.description {
+        b.push(format!("{description}\n"));
+    }
+
+    if let Some(ref trackers) = state.tracker {
+        //b.push(format!("## Connect\n"));
+        b.push("```".into());
+        for tracker in trackers {
+            b.push(tracker.to_string());
+        }
+        b.push("```\n".into());
+    }
+
+    b.push("## Recent\n".into());
+
+    if torrents.is_empty() {
+        b.push("Nothing.\n".into())
+    } else {
+        for torrent in torrents {
+            let i: TorrentMetaV1Owned = torrent_from_bytes(&torrent.bytes)?;
+            b.push(format!(
+                "=> /{} {}",
+                i.info_hash.as_string(),
+                i.info
+                    .name
+                    .as_ref()
+                    .map(|n| n.to_string())
+                    .unwrap_or_default()
+            ));
+            b.push(format!(
+                "{} • {} • {}{}\n",
+                torrent.time.format(&state.format_date),
+                format::total(&i),
+                format::files(&i),
+                state
+                    .scrape
+                    .get(i.info_hash.0)
+                    .map(|s| format!(" • ↑ {} ↓ {} ⏲ {}", s.seeders, s.peers, s.leechers))
+                    .unwrap_or_default()
+            ));
+        }
+    }
+
+    b.push("## Navigation\n".into());
+
+    b.push(format!(
+        "Page {} / {} ({total} {} total)\n",
+        page.unwrap_or(1),
+        (total as f64 / state.public.default_limit as f64).ceil(),
+        total.plurify(&["torrent", "torrents", "torrents"])
+    ));
+
+    if page.unwrap_or(1) * state.public.default_limit < total {
+        b.push(format!(
+            "=> /{}{} Next",
+            page.map_or(2, |p| p + 1),
+            query(keyword)
+        ))
+    }
+
+    if let Some(p) = page {
+        b.push(format!(
+            "=> {}{} Back",
+            if p > 2 {
+                format!("/{}", p - 1)
+            } else {
+                "/".into()
+            },
+            query(keyword)
+        ))
+    }
+
+    b.push("\n=> /search Search".into());
+
+    Ok(b.join("\n"))
+}
+
+fn info(state: &State, torrent: Torrent) -> Result<String> {
+    struct File {
+        path: Option<PathBuf>,
+        length: u64,
+    }
+    impl File {
+        pub fn path(&self) -> String {
+            self.path
+                .as_ref()
+                .map(|p| p.to_string_lossy().into())
+                .unwrap_or("?".into())
+        }
+    }
+
+    let i: TorrentMetaV1Owned = torrent_from_bytes(&torrent.bytes)?;
+
+    let mut b = Vec::new();
+
+    b.push(format!(
+        "# {}\n",
+        i.info
+            .name
+            .as_ref()
+            .map(|n| n.to_string())
+            .unwrap_or(state.name.clone())
+    ));
+
+    b.push(format!(
+        "{} • {} • {}{}\n",
+        torrent.time.format(&state.format_date),
+        format::total(&i),
+        format::files(&i),
+        state
+            .scrape
+            .get(i.info_hash.0)
+            .map(|s| format!(" • ↑ {} ↓ {} ⏲ {}", s.seeders, s.peers, s.leechers))
+            .unwrap_or_default()
+    ));
+
+    b.push(format!(
+        "=> {} Magnet\n",
+        format::magnet(&i, state.tracker.as_ref())
+    ));
+
+    if let Some(files) = i.info.files.map(|files| {
+        let mut b = Vec::with_capacity(files.len());
+        for f in files {
+            let mut p = PathBuf::new();
+            b.push(File {
+                length: f.length,
+                path: match f.full_path(&mut p) {
+                    Ok(()) => Some(p),
+                    Err(e) => {
+                        warn!("Filename decode error: {e}");
+                        None
+                    }
+                },
+            })
+        }
+        b.sort_by(|a, b| a.path.cmp(&b.path)); // @TODO optional
+        b
+    }) {
+        b.push("## Files\n".into());
+        for file in files {
+            let p = file.path();
+            b.push(match state.public.href(&i.info_hash.as_string(), &p) {
+                Some(href) => format!(
+                    "=> {} {} ({})",
+                    urlencoding::encode(&href),
+                    p,
+                    format::size(file.length)
+                ),
+                None => format!("{} ({})", p, format::size(file.length)), // * ?
+            })
+        }
+    }
+
+    Ok(b.join("\n"))
+}
+
+struct State {
+    description: Option<String>,
+    format_date: String,
+    name: String,
+    public: Storage,
+    scrape: Scrape,
+    tracker: Option<Vec<url::Url>>,
+}

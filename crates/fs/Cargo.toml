@@ -1,0 +1,22 @@
+[package]
+name = "btracker-fs"
+version = "0.4.0"
+edition = "2024"
+license = "MIT"
+readme = "README.md"
+description = "Shared filesystem API for the βtracker project components"
+keywords = ["btracker", "btracker-crawler", "bittorrent", "librqbit", "database"]
+categories = ["network-programming"]
+repository = "https://github.com/yggverse/btracker"
+# homepage = "https://yggverse.github.io"
+
+[features]
+default = ["public"]
+public = ["dep:chrono", "dep:librqbit-core"]
+crawler = ["dep:log", "dep:regex"]
+
+[dependencies]
+chrono = { version = "0.4.41", features = ["serde"], optional = true }
+librqbit-core = { version = "5.0.0", optional = true }
+log = { version = "0.4.28", optional = true }
+regex = { version = "1.11.2", optional = true }

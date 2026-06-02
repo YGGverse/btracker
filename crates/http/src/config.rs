@@ -12,7 +12,7 @@ pub struct Config {
     ///
     /// This location must contain:
     /// * the default or custom `/public/*` files (see the [Rocket deploying specification](https://rocket.rs/guide/v0.5/deploying/))
-    /// * torrents with files collected by the [aquatic-crawler](https://github.com/yggverse/aquatic-crawler)
+    /// * torrents with files collected by the `btracker-crawler`
     #[arg(long)]
     pub public: PathBuf,
 
