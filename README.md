@@ -4,6 +4,6 @@
 
 βtracker is an ecosystem to deploy BitTorrent open tracker with DHT search engine.
 
-> ![TIP]
+> [!TIP]
 
 See working server [config](https://codeberg.org/YGGverse/server/search/branch/main?path=&q=btracker)
