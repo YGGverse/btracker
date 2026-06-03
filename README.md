@@ -6,4 +6,4 @@
 
 > [!TIP]
 >
-> See working server [config](https://codeberg.org/YGGverse/server/search/branch/main?path=&q=btracker)
+> See working server [config examples](https://codeberg.org/YGGverse/server/search/branch/main?path=&q=btracker) to deploy
