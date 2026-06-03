@@ -3,7 +3,8 @@ mod full_scrape;
 
 use anyhow::Result;
 use librqbit::{
-    AddTorrent, AddTorrentOptions, AddTorrentResponse, ConnectionOptions, Session, SessionOptions,
+    AddTorrent, AddTorrentOptions, AddTorrentResponse, ConnectionOptions, DhtSessionConfig,
+    Session, SessionOptions,
 };
 use std::{collections::HashSet, num::NonZero, time::Duration};
 use url::Url;
@@ -63,8 +64,14 @@ async fn main() -> Result<()> {
                     proxy_url: config.proxy_url.as_ref().map(|u| u.to_string()),
                     ..ConnectionOptions::default()
                 }),
-                disable_dht_persistence: true,
-                disable_dht: !config.enable_dht,
+                dht: if config.enable_dht {
+                    Some(DhtSessionConfig {
+                        persistence: None,
+                        ..DhtSessionConfig::default()
+                    })
+                } else {
+                    None
+                },
                 disable_local_service_discovery: !config.enable_lsd,
                 disable_upload: true,
                 fastresume: false,
