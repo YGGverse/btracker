@@ -16,7 +16,7 @@ bendy = "0.6.1"
 btracker-fs = { version = "0.3.1", features = ["crawler"] }
 chrono = "0.4.44"
 clap = { version = "4.6.1", features = ["derive"] }
-librqbit = { version = "9.0.0-beta.2", features = ["disable-upload"]}
+librqbit = { version = "9.0.0-rc.0", features = ["disable-upload"]}
 log = "0.4.30"
 regex = "1.12.3"
 reqwest = "0.13.4"
