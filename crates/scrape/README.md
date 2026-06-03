@@ -27,4 +27,3 @@ let scrape = Scrape::init(Some(udp_server, udp_trackers));
 
 println!("{:?}", scrape.get([u8; 20])); // hash v1
 ```
-* see [btracker](https://github.com/YGGverse/btracker) and [btracker-gemini](https://github.com/YGGverse/btracker-gemini) implementations
