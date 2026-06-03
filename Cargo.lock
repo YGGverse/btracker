@@ -436,6 +436,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "btracker-fs"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7b70704bdaaa34d4655f6765195ae3da950b5fc2dd2f14cf267defae13b8bea7"
+dependencies = [
+ "chrono",
+ "librqbit-core 5.0.0",
+]
+
+[[package]]
 name = "btracker-gemini"
 version = "0.1.1"
 dependencies = [
@@ -459,7 +469,7 @@ dependencies = [
 name = "btracker-http"
 version = "0.1.0"
 dependencies = [
- "btracker-fs 0.4.0",
+ "btracker-fs 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "btracker-scrape 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "chrono",
  "clap",
