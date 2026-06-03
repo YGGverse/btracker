@@ -420,7 +420,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6846910a99e54812b66ce31c1a42f2690fdfc0b8afcfe162196fd1a2af1dbf9a"
 dependencies = [
  "chrono",
- "librqbit-core 5.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "librqbit-core 5.0.0",
  "log",
  "regex",
 ]
@@ -430,9 +430,19 @@ name = "btracker-fs"
 version = "0.4.0"
 dependencies = [
  "chrono",
- "librqbit-core 5.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "librqbit-core 5.0.0",
  "log",
  "regex",
+]
+
+[[package]]
+name = "btracker-fs"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7b70704bdaaa34d4655f6765195ae3da950b5fc2dd2f14cf267defae13b8bea7"
+dependencies = [
+ "chrono",
+ "librqbit-core 5.0.0",
 ]
 
 [[package]]
@@ -444,7 +454,7 @@ dependencies = [
  "btracker-scrape 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "chrono",
  "clap",
- "librqbit-core 5.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "librqbit-core 5.0.0",
  "log",
  "native-tls",
  "plurify",
@@ -459,11 +469,11 @@ dependencies = [
 name = "btracker-http"
 version = "0.1.0"
 dependencies = [
- "btracker-fs 0.4.0",
+ "btracker-fs 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "btracker-scrape 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "chrono",
  "clap",
- "librqbit-core 5.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "librqbit-core 5.0.0",
  "rand 0.10.1",
  "rocket",
  "rocket_dyn_templates",
@@ -2030,8 +2040,9 @@ dependencies = [
 
 [[package]]
 name = "librqbit"
-version = "9.0.0-beta.2"
-source = "git+https://github.com/ikatson/rqbit.git?rev=61e189a9b37ab3ba678efa66586c2c1aabeed584#61e189a9b37ab3ba678efa66586c2c1aabeed584"
+version = "9.0.0-rc.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b9451def41c18d1b8e7b68c097bcb0c9a0579cdc9b779803368a65b86cae03d2"
 dependencies = [
  "anyhow",
  "arc-swap",
@@ -2052,15 +2063,15 @@ dependencies = [
  "http 1.4.1",
  "intervaltree",
  "itertools",
- "librqbit-bencode 3.1.0 (git+https://github.com/ikatson/rqbit.git?rev=61e189a9b37ab3ba678efa66586c2c1aabeed584)",
- "librqbit-buffers 4.2.0 (git+https://github.com/ikatson/rqbit.git?rev=61e189a9b37ab3ba678efa66586c2c1aabeed584)",
- "librqbit-clone-to-owned 3.0.1 (git+https://github.com/ikatson/rqbit.git?rev=61e189a9b37ab3ba678efa66586c2c1aabeed584)",
- "librqbit-core 5.0.0 (git+https://github.com/ikatson/rqbit.git?rev=61e189a9b37ab3ba678efa66586c2c1aabeed584)",
+ "librqbit-bencode 9.0.0-rc.0",
+ "librqbit-buffers 9.0.0-rc.0",
+ "librqbit-clone-to-owned 9.0.0-rc.0",
+ "librqbit-core 9.0.0-rc.0",
  "librqbit-dht",
  "librqbit-dualstack-sockets",
  "librqbit-lsd",
  "librqbit-peer-protocol",
- "librqbit-sha1-wrapper 4.1.0 (git+https://github.com/ikatson/rqbit.git?rev=61e189a9b37ab3ba678efa66586c2c1aabeed584)",
+ "librqbit-sha1-wrapper 9.0.0-rc.0",
  "librqbit-tracker-comms",
  "librqbit-upnp",
  "librqbit-utp",
@@ -2100,23 +2111,24 @@ checksum = "606dff526ba81e3eca33e2bb28b53afa2bc0b2c41d252333fa44e6c11abb37da"
 dependencies = [
  "anyhow",
  "bytes",
- "librqbit-buffers 4.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "librqbit-clone-to-owned 3.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "librqbit-sha1-wrapper 4.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "librqbit-buffers 4.2.0",
+ "librqbit-clone-to-owned 3.0.1",
+ "librqbit-sha1-wrapper 4.1.0",
  "serde",
 ]
 
 [[package]]
 name = "librqbit-bencode"
-version = "3.1.0"
-source = "git+https://github.com/ikatson/rqbit.git?rev=61e189a9b37ab3ba678efa66586c2c1aabeed584#61e189a9b37ab3ba678efa66586c2c1aabeed584"
+version = "9.0.0-rc.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "97490fb9b35fb575f498cc1e804b23be6bbf3603d5a2358733e5b867d1ee52e8"
 dependencies = [
  "anyhow",
  "arrayvec",
  "atoi",
  "bytes",
- "librqbit-buffers 4.2.0 (git+https://github.com/ikatson/rqbit.git?rev=61e189a9b37ab3ba678efa66586c2c1aabeed584)",
- "librqbit-clone-to-owned 3.0.1 (git+https://github.com/ikatson/rqbit.git?rev=61e189a9b37ab3ba678efa66586c2c1aabeed584)",
+ "librqbit-buffers 9.0.0-rc.0",
+ "librqbit-clone-to-owned 9.0.0-rc.0",
  "serde",
  "serde_derive",
  "thiserror 2.0.18",
@@ -2129,17 +2141,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d78c78b907d6171a7191c162b2b60db46d254ebde6a95282b77372af556c1463"
 dependencies = [
  "bytes",
- "librqbit-clone-to-owned 3.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "librqbit-clone-to-owned 3.0.1",
  "serde",
 ]
 
 [[package]]
 name = "librqbit-buffers"
-version = "4.2.0"
-source = "git+https://github.com/ikatson/rqbit.git?rev=61e189a9b37ab3ba678efa66586c2c1aabeed584#61e189a9b37ab3ba678efa66586c2c1aabeed584"
+version = "9.0.0-rc.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e845dbd14174712471c3430c958d5c25e391561c2dd31f39f895bb60f63c46f0"
 dependencies = [
  "bytes",
- "librqbit-clone-to-owned 3.0.1 (git+https://github.com/ikatson/rqbit.git?rev=61e189a9b37ab3ba678efa66586c2c1aabeed584)",
+ "librqbit-clone-to-owned 9.0.0-rc.0",
  "serde",
  "serde_derive",
 ]
@@ -2155,8 +2168,9 @@ dependencies = [
 
 [[package]]
 name = "librqbit-clone-to-owned"
-version = "3.0.1"
-source = "git+https://github.com/ikatson/rqbit.git?rev=61e189a9b37ab3ba678efa66586c2c1aabeed584#61e189a9b37ab3ba678efa66586c2c1aabeed584"
+version = "9.0.0-rc.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "76ef698eb8d7745f425f2b9a93e6a9d946bcb8bf84a559303e0fc3f01e8ad07c"
 dependencies = [
  "bytes",
 ]
@@ -2174,9 +2188,9 @@ dependencies = [
  "directories",
  "hex 0.4.3",
  "itertools",
- "librqbit-bencode 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "librqbit-buffers 4.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "librqbit-clone-to-owned 3.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "librqbit-bencode 3.1.0",
+ "librqbit-buffers 4.2.0",
+ "librqbit-clone-to-owned 3.0.1",
  "parking_lot",
  "rand 0.9.4",
  "serde",
@@ -2188,8 +2202,9 @@ dependencies = [
 
 [[package]]
 name = "librqbit-core"
-version = "5.0.0"
-source = "git+https://github.com/ikatson/rqbit.git?rev=61e189a9b37ab3ba678efa66586c2c1aabeed584#61e189a9b37ab3ba678efa66586c2c1aabeed584"
+version = "9.0.0-rc.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a38e805aad201d96024849649174015d48a575348b35bbd927d99b47464e665e"
 dependencies = [
  "anyhow",
  "bytes",
@@ -2199,10 +2214,10 @@ dependencies = [
  "encoding_rs",
  "hex 0.4.3",
  "itertools",
- "librqbit-bencode 3.1.0 (git+https://github.com/ikatson/rqbit.git?rev=61e189a9b37ab3ba678efa66586c2c1aabeed584)",
- "librqbit-buffers 4.2.0 (git+https://github.com/ikatson/rqbit.git?rev=61e189a9b37ab3ba678efa66586c2c1aabeed584)",
- "librqbit-clone-to-owned 3.0.1 (git+https://github.com/ikatson/rqbit.git?rev=61e189a9b37ab3ba678efa66586c2c1aabeed584)",
- "librqbit-sha1-wrapper 4.1.0 (git+https://github.com/ikatson/rqbit.git?rev=61e189a9b37ab3ba678efa66586c2c1aabeed584)",
+ "librqbit-bencode 9.0.0-rc.0",
+ "librqbit-buffers 9.0.0-rc.0",
+ "librqbit-clone-to-owned 9.0.0-rc.0",
+ "librqbit-sha1-wrapper 9.0.0-rc.0",
  "memchr",
  "parking_lot",
  "rand 0.9.4",
@@ -2217,8 +2232,9 @@ dependencies = [
 
 [[package]]
 name = "librqbit-dht"
-version = "5.3.0"
-source = "git+https://github.com/ikatson/rqbit.git?rev=61e189a9b37ab3ba678efa66586c2c1aabeed584#61e189a9b37ab3ba678efa66586c2c1aabeed584"
+version = "9.0.0-rc.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d59a9374b33a52a065171641ae518db97969d3db849a57824c72c53d2109918b"
 dependencies = [
  "anyhow",
  "backon",
@@ -2228,10 +2244,10 @@ dependencies = [
  "futures",
  "indexmap 2.14.0",
  "leaky-bucket",
- "librqbit-bencode 3.1.0 (git+https://github.com/ikatson/rqbit.git?rev=61e189a9b37ab3ba678efa66586c2c1aabeed584)",
- "librqbit-buffers 4.2.0 (git+https://github.com/ikatson/rqbit.git?rev=61e189a9b37ab3ba678efa66586c2c1aabeed584)",
- "librqbit-clone-to-owned 3.0.1 (git+https://github.com/ikatson/rqbit.git?rev=61e189a9b37ab3ba678efa66586c2c1aabeed584)",
- "librqbit-core 5.0.0 (git+https://github.com/ikatson/rqbit.git?rev=61e189a9b37ab3ba678efa66586c2c1aabeed584)",
+ "librqbit-bencode 9.0.0-rc.0",
+ "librqbit-buffers 9.0.0-rc.0",
+ "librqbit-clone-to-owned 9.0.0-rc.0",
+ "librqbit-core 9.0.0-rc.0",
  "librqbit-dualstack-sockets",
  "parking_lot",
  "rand 0.9.4",
@@ -2264,17 +2280,17 @@ dependencies = [
 
 [[package]]
 name = "librqbit-lsd"
-version = "0.1.0"
-source = "git+https://github.com/ikatson/rqbit.git?rev=61e189a9b37ab3ba678efa66586c2c1aabeed584#61e189a9b37ab3ba678efa66586c2c1aabeed584"
+version = "9.0.0-rc.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4e65ddc3b64392a71378944712c9830aac8ef98f860b180419dd42b4596e7faa"
 dependencies = [
  "anyhow",
  "atoi",
  "bstr",
  "futures",
  "httparse",
- "librqbit-core 5.0.0 (git+https://github.com/ikatson/rqbit.git?rev=61e189a9b37ab3ba678efa66586c2c1aabeed584)",
+ "librqbit-core 9.0.0-rc.0",
  "librqbit-dualstack-sockets",
- "librqbit-sha1-wrapper 4.1.0 (git+https://github.com/ikatson/rqbit.git?rev=61e189a9b37ab3ba678efa66586c2c1aabeed584)",
  "parking_lot",
  "rand 0.9.4",
  "tokio",
@@ -2284,18 +2300,19 @@ dependencies = [
 
 [[package]]
 name = "librqbit-peer-protocol"
-version = "4.3.0"
-source = "git+https://github.com/ikatson/rqbit.git?rev=61e189a9b37ab3ba678efa66586c2c1aabeed584#61e189a9b37ab3ba678efa66586c2c1aabeed584"
+version = "9.0.0-rc.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "76ade1bbea8cf3e7eb51978b32a549787d17bbf872f3f0ed47d7c85e7377705a"
 dependencies = [
  "anyhow",
  "bitvec",
  "byteorder",
  "bytes",
  "itertools",
- "librqbit-bencode 3.1.0 (git+https://github.com/ikatson/rqbit.git?rev=61e189a9b37ab3ba678efa66586c2c1aabeed584)",
- "librqbit-buffers 4.2.0 (git+https://github.com/ikatson/rqbit.git?rev=61e189a9b37ab3ba678efa66586c2c1aabeed584)",
- "librqbit-clone-to-owned 3.0.1 (git+https://github.com/ikatson/rqbit.git?rev=61e189a9b37ab3ba678efa66586c2c1aabeed584)",
- "librqbit-core 5.0.0 (git+https://github.com/ikatson/rqbit.git?rev=61e189a9b37ab3ba678efa66586c2c1aabeed584)",
+ "librqbit-bencode 9.0.0-rc.0",
+ "librqbit-buffers 9.0.0-rc.0",
+ "librqbit-clone-to-owned 9.0.0-rc.0",
+ "librqbit-core 9.0.0-rc.0",
  "serde",
  "serde_derive",
  "thiserror 2.0.18",
@@ -2314,8 +2331,9 @@ dependencies = [
 
 [[package]]
 name = "librqbit-sha1-wrapper"
-version = "4.1.0"
-source = "git+https://github.com/ikatson/rqbit.git?rev=61e189a9b37ab3ba678efa66586c2c1aabeed584#61e189a9b37ab3ba678efa66586c2c1aabeed584"
+version = "9.0.0-rc.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "eeb119e5c05f1aa4011cf2e4dc19f83403064d2210804e2f35f06abac4e5b710"
 dependencies = [
  "assert_cfg",
  "crypto-hash",
@@ -2323,8 +2341,9 @@ dependencies = [
 
 [[package]]
 name = "librqbit-tracker-comms"
-version = "3.0.0"
-source = "git+https://github.com/ikatson/rqbit.git?rev=61e189a9b37ab3ba678efa66586c2c1aabeed584#61e189a9b37ab3ba678efa66586c2c1aabeed584"
+version = "9.0.0-rc.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0ae0c520cc5f028fb50d746eaa6ba2aa082228db96c2baf1a312f9cacfceeb58"
 dependencies = [
  "anyhow",
  "async-stream",
@@ -2332,9 +2351,9 @@ dependencies = [
  "byteorder",
  "futures",
  "itertools",
- "librqbit-bencode 3.1.0 (git+https://github.com/ikatson/rqbit.git?rev=61e189a9b37ab3ba678efa66586c2c1aabeed584)",
- "librqbit-buffers 4.2.0 (git+https://github.com/ikatson/rqbit.git?rev=61e189a9b37ab3ba678efa66586c2c1aabeed584)",
- "librqbit-core 5.0.0 (git+https://github.com/ikatson/rqbit.git?rev=61e189a9b37ab3ba678efa66586c2c1aabeed584)",
+ "librqbit-bencode 9.0.0-rc.0",
+ "librqbit-buffers 9.0.0-rc.0",
+ "librqbit-core 9.0.0-rc.0",
  "librqbit-dualstack-sockets",
  "parking_lot",
  "rand 0.9.4",
@@ -2351,8 +2370,9 @@ dependencies = [
 
 [[package]]
 name = "librqbit-upnp"
-version = "1.0.0"
-source = "git+https://github.com/ikatson/rqbit.git?rev=61e189a9b37ab3ba678efa66586c2c1aabeed584#61e189a9b37ab3ba678efa66586c2c1aabeed584"
+version = "9.0.0-rc.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "058af0d5e2a99c567b73369455e3852c48addcf751836f08cfc25ca89dd16cc3"
 dependencies = [
  "anyhow",
  "bstr",
