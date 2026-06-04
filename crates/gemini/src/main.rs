@@ -303,22 +303,30 @@ fn send(data: &[u8], stream: &mut TlsStream<TcpStream>, callback: impl FnOnce(Re
 }
 
 fn list(state: &State, keyword: Option<&str>, page: Option<usize>) -> Result<String> {
+    use std::{cell::RefCell, collections::HashMap, rc::Rc};
+
     /// format search keyword as the pagination query
     fn query(keyword: Option<&str>) -> String {
         keyword.map(|k| format!("?{}", k)).unwrap_or_default()
     }
+
+    let scrape_index: Rc<RefCell<HashMap<librqbit_core::Id20, btracker_scrape::Result>>> =
+        Rc::new(RefCell::new(HashMap::new())); // scrape info-hashes once
 
     let result = state.public.torrents(
         keyword,
         Some((Sort::Modified, Order::Desc)),
         page.map(|p| if p > 0 { p - 1 } else { p } * state.public.default_limit),
         Some(state.public.default_limit),
-        |id| {
-            keyword.is_some() // show all torrents on search request or hide inactive
-                || state
-                    .scrape
-                    .get(id.0)
-                    .is_some_and(|s| s.leechers > 0 || s.peers > 0 || s.seeders > 0)
+        {
+            let si = scrape_index.clone();
+            move |id| {
+                state.scrape.get(id.0).is_none_or(|s| {
+                    let is_active = s.leechers > 0 || s.peers > 0 || s.seeders > 0;
+                    assert!(si.borrow_mut().insert(id, s).is_none());
+                    keyword.is_some() || is_active // show all torrents on search request or hide inactive
+                })
+            }
         },
     )?;
 
@@ -347,7 +355,6 @@ fn list(state: &State, keyword: Option<&str>, page: Option<usize>) -> Result<Str
     }
 
     if let Some(ref trackers) = state.tracker {
-        //b.push(format!("## Connect\n"));
         b.push("```".into());
         for tracker in trackers {
             b.push(tracker.to_string());
@@ -360,6 +367,7 @@ fn list(state: &State, keyword: Option<&str>, page: Option<usize>) -> Result<Str
     if result.list.is_empty() {
         b.push("Nothing.\n".into())
     } else {
+        let mut si = scrape_index.borrow_mut();
         for torrent in result.list {
             let i: TorrentMetaV1Owned = torrent_from_bytes(&torrent.bytes)?;
             b.push(format!(
@@ -376,9 +384,7 @@ fn list(state: &State, keyword: Option<&str>, page: Option<usize>) -> Result<Str
                 torrent.time.format(&state.format_date),
                 format::total(&i),
                 format::files(&i),
-                state
-                    .scrape
-                    .get(i.info_hash.0)
+                si.remove(&i.info_hash)
                     .map(|s| format!(" • ↑ {} ↓ {} ⏲ {}", s.seeders, s.peers, s.leechers))
                     .unwrap_or_default()
             ));
