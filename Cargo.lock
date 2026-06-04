@@ -445,7 +445,7 @@ dependencies = [
 
 [[package]]
 name = "btracker-gemini"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "btracker-fs 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",

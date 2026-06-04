@@ -5,13 +5,11 @@
 
 βtracker server implementation for the [Gemini protocol](http://geminiprotocol.net)
 
-> [!NOTE]
-> In development!
-
 ## Install
 
 ``` bash
-git clone https://github.com/YGGverse/btracker.git && cd btracker
+git clone https://github.com/YGGverse/btracker.git
+cd btracker
 cargo build --release -p btracker-gemini
 sudo install target/release/btracker-gemini /usr/local/bin
 ```
