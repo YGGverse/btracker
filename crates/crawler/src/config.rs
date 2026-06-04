@@ -8,7 +8,7 @@ use url::Url;
 pub struct Config {
     /// Directory path to store preloaded data (e.g. `.torrent` files)
     ///
-    /// * it's probably the same location as `public` dir for the [btracker](https://github.com/YGGverse/btracker) frontend
+    /// * it's probably the same location as `public` dir for the `btracker-http` frontend
     #[arg(long, short)]
     pub preload: PathBuf,
 
