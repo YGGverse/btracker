@@ -448,12 +448,13 @@ fn info(state: &State, torrent: Torrent) -> Result<String> {
     let mut b = Vec::new();
 
     b.push(format!(
-        "# {}\n",
+        "# {} • {}\n",
         i.info
             .name
             .as_ref()
             .map(|n| n.to_string())
-            .unwrap_or(state.name.clone())
+            .unwrap_or(state.name.clone()),
+        state.name
     ));
 
     b.push(format!(
