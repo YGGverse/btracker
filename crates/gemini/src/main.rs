@@ -303,18 +303,23 @@ fn send(data: &[u8], stream: &mut TlsStream<TcpStream>, callback: impl FnOnce(Re
 }
 
 fn list(state: &State, keyword: Option<&str>, page: Option<usize>) -> Result<String> {
-    use plurify::Plurify;
-
     /// format search keyword as the pagination query
     fn query(keyword: Option<&str>) -> String {
         keyword.map(|k| format!("?{}", k)).unwrap_or_default()
     }
 
-    let (total, torrents) = state.public.torrents(
+    let result = state.public.torrents(
         keyword,
         Some((Sort::Modified, Order::Desc)),
         page.map(|p| if p > 0 { p - 1 } else { p } * state.public.default_limit),
         Some(state.public.default_limit),
+        |id| {
+            keyword.is_some() // show all torrents on search request or hide inactive
+                || state
+                    .scrape
+                    .get(id.0)
+                    .is_some_and(|s| s.leechers > 0 || s.peers > 0 || s.seeders > 0)
+        },
     )?;
 
     let mut b = Vec::new();
@@ -352,10 +357,10 @@ fn list(state: &State, keyword: Option<&str>, page: Option<usize>) -> Result<Str
 
     b.push("## Recent\n".into());
 
-    if torrents.is_empty() {
+    if result.list.is_empty() {
         b.push("Nothing.\n".into())
     } else {
-        for torrent in torrents {
+        for torrent in result.list {
             let i: TorrentMetaV1Owned = torrent_from_bytes(&torrent.bytes)?;
             b.push(format!(
                 "=> /{} {}",
@@ -382,14 +387,24 @@ fn list(state: &State, keyword: Option<&str>, page: Option<usize>) -> Result<Str
 
     b.push("## Navigation\n".into());
 
-    b.push(format!(
-        "Page {} / {} ({total} {} total)\n",
-        page.unwrap_or(1),
-        (total as f64 / state.public.default_limit as f64).ceil(),
-        total.plurify(&["torrent", "torrents", "torrents"])
-    ));
+    if keyword.is_none() {
+        b.push(format!(
+            "Page {} / {} ({} active {} total)\n",
+            page.unwrap_or(1),
+            (result.visible as f64 / state.public.default_limit as f64).ceil(),
+            result.visible,
+            result.total
+        ));
+    } else {
+        b.push(format!(
+            "Page {} / {} ({} total)\n",
+            page.unwrap_or(1),
+            (result.visible as f64 / state.public.default_limit as f64).ceil(),
+            result.visible
+        ));
+    }
 
-    if page.unwrap_or(1) * state.public.default_limit < total {
+    if page.unwrap_or(1) * state.public.default_limit < result.visible {
         b.push(format!(
             "=> /{}{} Next",
             page.map_or(2, |p| p + 1),

@@ -11,7 +11,7 @@ repository = "https://github.com/YGGverse/btracker"
 
 [dependencies]
 anyhow = "1.0.95"
-btracker-fs = { version = "0.3.0", features = ["public"] }
+btracker-fs = { version = "0.4.0", features = ["public"] }
 btracker-scrape = "0.1.0"
 chrono = "^0.4.20"
 clap = { version = "4.5.30", features = ["derive"] }
