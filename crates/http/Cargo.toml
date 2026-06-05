@@ -19,5 +19,7 @@ librqbit-core = "5.0.0"
 rand = "0.10.1"
 rocket = "0.5.1"
 rocket_dyn_templates = { version = "0.2.0", features = ["tera"] }
+serde = { version = "1.0.228", features = ["derive"] }
+serde_bencode = "0.2.4"
 url = { version = "2.5.8", features = ["serde"] }
 urlencoding = "2.1.3"

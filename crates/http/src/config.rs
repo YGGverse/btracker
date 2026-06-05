@@ -17,18 +17,23 @@ pub struct Config {
     pub public: PathBuf,
 
     /// Server name
+    /// * append also to the torrent files as a comment
     #[arg(long, default_value_t = String::from("βtracker"))]
     pub title: String,
 
     /// Server description
+    /// * append also to the torrent files as a comment
     #[arg(long)]
     pub description: Option<String>,
 
     /// Canonical URL
+    /// * append also to the torrent files as a comment
     #[arg(long)]
     pub canonical_url: Option<Url>,
 
-    /// Display following tracker(s) in the header, append also to the magnet links
+    /// Display following tracker(s) in the header
+    /// * append also to the torrent files and magnet links as announce/list
+    /// * make sure that `/info_hash_v1.torrent` URI ignored by the proxy
     #[arg(long)]
     pub tracker: Option<Vec<Url>>,
 

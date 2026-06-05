@@ -122,7 +122,7 @@ fn index(
     ))
 }
 
-#[get("/<info_hash>")]
+#[get("/<info_hash>", rank = 1)]
 fn info(
     info_hash: InfoHash,
     storage: &State<Storage>,
@@ -177,6 +177,68 @@ fn info(
                     this
                 },
             ))
+        }
+        None => Err(Status::NotFound),
+    }
+}
+
+#[derive(Responder)]
+#[response(status = 200, content_type = "application/x-bittorrent")]
+pub struct TorrentFile(Vec<u8>);
+/// Return .torrent file with updated trackers @TODO resolve rank collision
+#[get("/<filename>", rank = 2)]
+fn torrent_file(
+    filename: info_hash::Torrent,
+    meta: &State<Meta>,
+    storage: &State<Storage>,
+) -> Result<TorrentFile, Status> {
+    match storage.torrent(filename.id20()) {
+        Some(t) => {
+            use serde_bencode::value::Value;
+            let mut b: std::collections::BTreeMap<String, serde_bencode::value::Value> =
+                serde_bencode::from_bytes(&t.bytes).map_err(|e| {
+                    error!("Torrent bytes decode error: `{e}`");
+                    Status::InternalServerError
+                })?;
+            if let Some(ref trackers) = meta.trackers {
+                let mut i = trackers.iter();
+                if let Some(a) = i.next() {
+                    b.insert(
+                        "announce".to_string(),
+                        Value::Bytes(a.as_str().as_bytes().to_vec()),
+                    );
+                }
+                let mut l = Vec::new();
+                for tracker in i {
+                    l.push(Value::List(vec![Value::Bytes(
+                        tracker.as_str().as_bytes().to_vec(),
+                    )]))
+                }
+                b.insert("announce-list".to_string(), Value::List(l));
+            }
+            b.insert(
+                "comment".to_string(),
+                Value::Bytes(
+                    format!(
+                        "{}{}{}",
+                        meta.title,
+                        meta.description
+                            .as_ref()
+                            .map(|d| format!("\n{d}"))
+                            .unwrap_or_default(),
+                        meta.canonical
+                            .as_ref()
+                            .map(|c| format!("\n{c}"))
+                            .unwrap_or_default(),
+                    )
+                    .as_bytes()
+                    .to_vec(),
+                ),
+            );
+            Ok(TorrentFile(serde_bencode::to_bytes(&b).map_err(|e| {
+                error!("Could not encode torrent bytes: `{e}`");
+                Status::InternalServerError
+            })?))
         }
         None => Err(Status::NotFound),
     }
@@ -276,7 +338,7 @@ fn rocket() -> _ {
             version: env!("CARGO_PKG_VERSION").into(),
         })
         .mount("/", rocket::fs::FileServer::from(config.public))
-        .mount("/", routes![index, rss, info])
+        .mount("/", routes![index, rss, info, torrent_file])
 }
 
 const S: &str = " • ";
