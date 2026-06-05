@@ -14,7 +14,12 @@ use config::Config;
 use feed::Feed;
 use info_hash::InfoHash;
 use meta::Meta;
-use rocket::{State, http::Status, response::content::RawXml, serde::Serialize};
+use rocket::{
+    State,
+    http::{ContentType, Header, Status},
+    response::{Responder, Response, content::RawXml},
+    serde::Serialize,
+};
 use rocket_dyn_templates::{Template, context};
 use torrent::Torrent;
 
@@ -182,9 +187,6 @@ fn info(
     }
 }
 
-#[derive(Responder)]
-#[response(status = 200, content_type = "application/x-bittorrent")]
-pub struct TorrentFile(Vec<u8>);
 /// Return .torrent file with updated trackers @TODO resolve rank collision
 #[get("/<filename>", rank = 2)]
 fn torrent_file(
@@ -235,10 +237,25 @@ fn torrent_file(
                     .to_vec(),
                 ),
             );
-            Ok(TorrentFile(serde_bencode::to_bytes(&b).map_err(|e| {
-                error!("Could not encode torrent bytes: `{e}`");
-                Status::InternalServerError
-            })?))
+            Ok(TorrentFile {
+                name: format!(
+                    "{}.torrent",
+                    if let Some(Value::Dict(info)) = b.get("info") {
+                        if let Some(Value::Bytes(name_bytes)) = info.get(b"name".as_slice()) {
+                            String::from_utf8(name_bytes.clone())
+                                .unwrap_or(filename.id20().as_string())
+                        } else {
+                            filename.id20().as_string()
+                        }
+                    } else {
+                        filename.id20().as_string()
+                    }
+                ),
+                data: serde_bencode::to_bytes(&b).map_err(|e| {
+                    error!("Could not encode torrent bytes: `{e}`");
+                    Status::InternalServerError
+                })?,
+            })
         }
         None => Err(Status::NotFound),
     }
@@ -342,3 +359,21 @@ fn rocket() -> _ {
 }
 
 const S: &str = " • ";
+
+/// Downloadable .torrent bytes, with meta-info updated
+struct TorrentFile {
+    name: String,
+    data: Vec<u8>,
+}
+impl<'r> Responder<'r, 'static> for TorrentFile {
+    fn respond_to(self, _: &'r rocket::request::Request<'_>) -> rocket::response::Result<'static> {
+        Response::build()
+            .header(ContentType::new("application", "x-bittorrent"))
+            .header(Header::new(
+                "Content-Disposition",
+                format!("attachment; filename=\"{}\"", self.name),
+            ))
+            .sized_body(self.data.len(), std::io::Cursor::new(self.data))
+            .ok()
+    }
+}
