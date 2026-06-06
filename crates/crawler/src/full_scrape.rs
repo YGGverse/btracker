@@ -31,6 +31,7 @@ pub async fn get(source: &str, capacity: usize) -> Result<Vec<Id20>> {
             while let Some(file_pair) = files_dict.next_pair().unwrap_or(None) {
                 i.push(Id20::from_bytes(file_pair.0)?)
             }
+            break;
         }
     }
 
