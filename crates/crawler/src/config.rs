@@ -22,6 +22,10 @@ pub struct Config {
     #[arg(long, default_value_t = 15)]
     pub full_scrape_timeout: u64,
 
+    /// Compact long data
+    #[arg(long, default_value = "gzip")]
+    pub full_scrape_compression: String,
+
     /// The P2P Blocklist file URL (to filter outgoing connections)
     ///
     /// * use `--blocklist=file:///path/to/blocklist.txt` format for the local path
@@ -122,6 +126,10 @@ pub struct Config {
     /// How long to wait for I2P tracker full scrape response
     #[arg(long, default_value_t = 10)]
     pub i2p_full_scrape_timeout: u64,
+
+    /// Compact long data
+    #[arg(long, default_value = "gzip")]
+    pub i2p_full_scrape_compression: String,
 
     /// Use HTTP(s) proxy to resolve `i2p_tracker` and `i2p_full_scrape`, usually `http://127.0.0.1:4444`
     /// * skip this setting if the I2P tracker is running locally (for the performance reasons)

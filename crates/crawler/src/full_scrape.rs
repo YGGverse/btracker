@@ -2,7 +2,7 @@ use anyhow::{Result, bail};
 use bendy::decoding::Decoder;
 use librqbit::dht::Id20;
 use log::*;
-use reqwest::{Client, Proxy};
+use reqwest::{Client, Proxy, header::*};
 use std::{io, time::Duration};
 
 /// Try parse info-hash from the given source,
@@ -11,14 +11,15 @@ pub async fn get(
     source_url: &str,
     capacity: usize,
     timeout: Duration,
+    compression_method: &str,
     http_proxy_url: Option<&str>,
 ) -> Result<Vec<Id20>> {
     let mut i = Vec::with_capacity(capacity);
 
     let bytes = if source_url.starts_with("http") {
-        trace!("begin full scrape request to `{source_url}`...");
+        trace!("build full scrape request to `{source_url}`...");
         let client = Client::builder().timeout(timeout);
-        let response = match http_proxy_url {
+        let request = match http_proxy_url {
             Some(p) => client.proxy(if p.starts_with("https") {
                 trace!("applying HTTPs proxy `{p}` to `{source_url}`...");
                 Proxy::https(p)?
@@ -32,15 +33,27 @@ pub async fn get(
             }
         }
         .build()?
-        .get(source_url)
+        .get(source_url);
+
+        trace!("sending full scrape request to `{source_url}`...");
+        let response = if compression_method.is_empty() {
+            trace!("disable compression for `{source_url}`...");
+            request
+        } else {
+            trace!("set `{compression_method}` compression method for `{source_url}`...");
+            request.header(ACCEPT_ENCODING, compression_method)
+        }
         .send()
         .await?;
 
         if !response.status().is_success() {
-            bail!("HTTP error: {}", response.status())
+            bail!(
+                "HTTP request to `{source_url}` failed: {}",
+                response.status()
+            )
         }
 
-        trace!("HTTP response received successfully, reading the bytes...");
+        trace!("HTTP response from `{source_url}` received successfully, reading the bytes...");
         let res_bytes = response.bytes().await?;
         res_bytes.to_vec()
     } else {

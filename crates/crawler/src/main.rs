@@ -95,6 +95,7 @@ async fn main() -> Result<()> {
                 source,
                 config.index_capacity,
                 Duration::from_secs(config.full_scrape_timeout),
+                &config.full_scrape_compression,
                 None,
             )
             .await
@@ -117,6 +118,7 @@ async fn main() -> Result<()> {
                 source,
                 config.index_capacity,
                 Duration::from_secs(config.i2p_full_scrape_timeout),
+                &config.i2p_full_scrape_compression,
                 config.i2p_proxy.as_ref().map(|p| p.as_str()),
             )
             .await
