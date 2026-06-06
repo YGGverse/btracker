@@ -195,7 +195,7 @@ async fn main() -> Result<()> {
                                         );
                                         continue;
                                     }
-                                    if preload.regex.as_ref().is_some_and(|r| {
+                                    if preload.regex.as_ref().is_none_or(|r| {
                                         !r.is_match(&info.relative_filename.to_string_lossy())
                                     }) {
                                         debug!("regex filter, skip file `{id}` for `{h}` at `{}`",
