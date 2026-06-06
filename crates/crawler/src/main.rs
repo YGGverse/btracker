@@ -1,12 +1,13 @@
 mod config;
 mod full_scrape;
+mod i2p;
 
 use anyhow::Result;
 use librqbit::{
     AddTorrent, AddTorrentOptions, AddTorrentResponse, ConnectionOptions, DhtSessionConfig,
     Session, SessionOptions,
 };
-use std::{collections::HashSet, num::NonZero, time::Duration};
+use std::{collections::HashSet, net::SocketAddr, num::NonZero, time::Duration};
 use url::Url;
 
 #[tokio::main]
@@ -135,6 +136,12 @@ async fn main() -> Result<()> {
                 debug!("torrent `{h}` is banned, skip for this queue.");
                 continue;
             }
+            // init unique peers hash table
+            let mut initial_peers: HashSet<SocketAddr> = config
+                .initial_peer
+                .as_ref()
+                .map(|p| p.iter().cloned().collect())
+                .unwrap_or_default();
             info!("resolve `{h}`...");
             // run the crawler in single thread for performance reasons,
             // use `timeout` argument option to skip the dead connections.
@@ -153,7 +160,25 @@ async fn main() -> Result<()> {
                         paused: true, // continue after `only_files` update
                         overwrite: true,
                         disable_trackers: config.tracker.is_empty(),
-                        initial_peers: config.initial_peer.clone(),
+                        initial_peers: {
+                            match i2p::get_peers(
+                                &i.0,
+                                &config.i2p_tracker,
+                                config.i2p_announce_timeout,
+                                config.i2p_tracker_proxy.as_ref(),
+                            )
+                            .await
+                            {
+                                Ok(p) => initial_peers.extend(p),
+                                Err(e) => warn!("{e}"),
+                            }
+                            if initial_peers.is_empty() {
+                                None
+                            } else {
+                                trace!("Collected {} unique peers to handle", initial_peers.len());
+                                Some(initial_peers.into_iter().collect())
+                            }
+                        },
                         list_only: false,
                         // the destination folder to preload files match `preload_regex`
                         // * e.g. images for audio albums
@@ -247,9 +272,7 @@ async fn main() -> Result<()> {
                 }
             }
         }
-
         session.stop().await;
-
         info!(
             "queue completed at {time_queue} (time: {} / uptime: {} / banned: {}) await {} seconds to continue...",
             Local::now()

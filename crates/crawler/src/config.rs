@@ -94,6 +94,21 @@ pub struct Config {
     /// when the specified value in seconds is reached
     ///
     /// * the ban time is dynamically calculated based on the current ban list collected
+    /// * tip: increase this value when using I2P features
     #[arg(long, default_value_t = 60)]
     pub timeout: u64,
+
+    /// Special trackers such as [opentracker-i2p](https://github.com/r4sas/opentracker-i2p)
+    /// that return B32 addresses instead of IP
+    #[arg(long)]
+    pub i2p_tracker: Vec<Url>,
+
+    /// Use HTTP(s) proxy to resolve `i2p_trackers`, usually `http://127.0.0.1:4444`
+    /// * skip this setting if the I2P tracker is running locally (for the performance reasons)
+    #[arg(long)]
+    pub i2p_tracker_proxy: Option<Url>,
+
+    /// How long to wait for I2P tracker response
+    #[arg(long, default_value_t = 10)]
+    pub i2p_announce_timeout: u64,
 }
