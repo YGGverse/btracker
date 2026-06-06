@@ -16,6 +16,12 @@ pub struct Config {
     #[arg(long, short)]
     pub full_scrape: Vec<String>,
 
+    /// How long to wait for I2P tracker full scrape response
+    /// * by compiling OpenTracker for `/scrape`,
+    ///   please make sure `FEATURES+=-DWANT_FULLSCRAPE` is enabled!
+    #[arg(long, default_value_t = 15)]
+    pub full_scrape_timeout: u64,
+
     /// The P2P Blocklist file URL (to filter outgoing connections)
     ///
     /// * use `--blocklist=file:///path/to/blocklist.txt` format for the local path
@@ -103,12 +109,22 @@ pub struct Config {
     #[arg(long)]
     pub i2p_tracker: Vec<Url>,
 
-    /// Use HTTP(s) proxy to resolve `i2p_trackers`, usually `http://127.0.0.1:4444`
+    /// How long to wait for I2P tracker announce response
+    #[arg(long, default_value_t = 10)]
+    pub i2p_tracker_announce_timeout: u64,
+
+    /// Absolute path(s) or URL(s) to the BEP 48 / Full Scrape for i2p_tracker(s)
+    /// * by compiling OpenTracker for `/scrape`,
+    ///   please make sure `FEATURES+=-DWANT_FULLSCRAPE` is enabled!
+    #[arg(long, short)]
+    pub i2p_full_scrape: Vec<String>,
+
+    /// How long to wait for I2P tracker full scrape response
+    #[arg(long, default_value_t = 10)]
+    pub i2p_full_scrape_timeout: u64,
+
+    /// Use HTTP(s) proxy to resolve `i2p_tracker` and `i2p_full_scrape`, usually `http://127.0.0.1:4444`
     /// * skip this setting if the I2P tracker is running locally (for the performance reasons)
     #[arg(long)]
-    pub i2p_tracker_proxy: Option<Url>,
-
-    /// How long to wait for I2P tracker response
-    #[arg(long, default_value_t = 10)]
-    pub i2p_announce_timeout: u64,
+    pub i2p_proxy: Option<Url>,
 }

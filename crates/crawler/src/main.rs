@@ -91,13 +91,42 @@ async fn main() -> Result<()> {
         let mut queue = HashSet::with_capacity(config.index_capacity);
         for source in &config.full_scrape {
             debug!("index source `{source}`...");
-            for i in match full_scrape::get(source, config.index_capacity).await {
+            for i in match full_scrape::get(
+                source,
+                config.index_capacity,
+                Duration::from_secs(config.full_scrape_timeout),
+                None,
+            )
+            .await
+            {
                 Ok(i) => {
                     debug!("fetch `{}` hashes from `{source}`...", i.len());
                     i
                 }
                 Err(e) => {
-                    warn!("the feed `{source}` update failed: `{e}`; skip.");
+                    warn!("the full scrape `{source}` update failed: `{e}`; skip.");
+                    continue; // skip without panic
+                }
+            } {
+                queue.insert(i);
+            }
+        }
+        for source in &config.i2p_full_scrape {
+            debug!("index I2P source `{source}`...");
+            for i in match full_scrape::get(
+                source,
+                config.index_capacity,
+                Duration::from_secs(config.i2p_full_scrape_timeout),
+                config.i2p_proxy.as_ref().map(|p| p.as_str()),
+            )
+            .await
+            {
+                Ok(i) => {
+                    debug!("fetch `{}` hashes from I2P `{source}`...", i.len());
+                    i
+                }
+                Err(e) => {
+                    warn!("I2P full scrape `{source}` update failed: `{e}`; skip.");
                     continue; // skip without panic
                 }
             } {
@@ -164,8 +193,8 @@ async fn main() -> Result<()> {
                             match i2p::get_peers(
                                 &i.0,
                                 &config.i2p_tracker,
-                                config.i2p_announce_timeout,
-                                config.i2p_tracker_proxy.as_ref(),
+                                config.i2p_tracker_announce_timeout,
+                                config.i2p_proxy.as_ref(),
                             )
                             .await
                             {
