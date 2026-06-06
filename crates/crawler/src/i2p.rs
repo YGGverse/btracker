@@ -14,10 +14,10 @@ pub async fn get_peers(
     use btpeer::http::{announce, query::Announce};
     let mut peers = HashSet::new();
     for tracker in trackers {
-        debug!("Get peers from I2P tracker `{tracker}`...");
+        debug!("get peers from I2P tracker `{tracker}`...");
         let mut peers_buffer = btpeer::peer::new_buffer(None);
         let a = Announce::new(tracker.as_str(), id20, 0)?;
-        trace!("Sending announce `{a}`...");
+        trace!("sending announce `{a}`...");
         announce(
             &a,
             std::time::Duration::from_secs(announce_timeout),
@@ -26,27 +26,27 @@ pub async fn get_peers(
         )
         .await?;
         let t = peers_buffer.len();
-        trace!("Received {t} peers total...");
+        trace!("received {t} peers total...");
         for (i, p) in peers_buffer.into_iter().enumerate() {
-            trace!("Handle peer `{p}` ({i}/{t})...");
+            trace!("handle peer `{p}` ({i}/{t})...");
             match p.host {
                 cyphernet::addr::HostName::I2p(i2p) => match new_bridge(i2p.to_string()).await {
                     Ok(peer) => {
                         let s = peer.to_string();
                         if peers.insert(peer) {
-                            trace!("Inserting new I2P peer `{s}`...")
+                            trace!("inserting new I2P peer `{s}`...")
                         } else {
-                            trace!("Replacing existing I2P peer `{s}`...")
+                            trace!("replacing existing I2P peer `{s}`...")
                         }
                     }
-                    Err(e) => warn!("Could not create now socket for peer `{i2p}`: `{e}`; skip."),
+                    Err(e) => warn!("could not create now socket for peer `{i2p}`: `{e}`; skip."),
                 },
-                n => warn!("Unexpected I2P address family: `{n}`; skip."),
+                n => warn!("unexpected I2P address family: `{n}`; skip."),
             }
         }
     }
-    debug!("Collected {} unique peers total.", peers.len());
-    trace!("Virtual peer bridges returned: {peers:?}");
+    debug!("collected {} unique peers total.", peers.len());
+    trace!("virtual peer bridges returned: {peers:?}");
     Ok(peers)
 }
 
