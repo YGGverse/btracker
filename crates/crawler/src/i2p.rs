@@ -65,12 +65,10 @@ async fn new_bridge(destination: String) -> Result<SocketAddr> {
     let proxy_address = listener.local_addr()?;
     let mut session = Session::<Stream>::new(Default::default()).await?;
 
-    tokio::spawn({
-        async move {
-            while let Ok((mut local, _)) = listener.accept().await {
-                if let Ok(mut remote) = session.connect(&destination).await {
-                    let _ = tokio::io::copy_bidirectional(&mut local, &mut remote).await;
-                }
+    tokio::spawn(async move {
+        while let Ok((mut local, _)) = listener.accept().await {
+            if let Ok(mut remote) = session.connect(&destination).await {
+                let _ = tokio::io::copy_bidirectional(&mut local, &mut remote).await;
             }
         }
     });
