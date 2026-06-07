@@ -41,7 +41,7 @@ fn main() -> Result<()> {
         public: Storage::init(&config.storage, config.limit, config.capacity).unwrap(),
         scrape: Scrape::init(
             config
-                .tracker
+                .scrape
                 .as_ref()
                 .map(|u| {
                     u.iter()
