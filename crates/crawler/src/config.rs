@@ -60,7 +60,7 @@ pub struct Config {
     #[arg(long)]
     pub bind: Option<String>,
 
-    /// Preload only files match regex pattern (list only without preload by default)
+    /// Preload content file (names) match regex pattern (.torrent file only if `None`)
     /// * see also `preload_max_filesize`, `preload_max_filecount` options
     ///
     /// ## Example:
@@ -69,8 +69,6 @@ pub struct Config {
     /// ```
     /// --preload-regex '\.(png|gif|jpeg|jpg|webp|svg|log|nfo|txt)$'
     /// ```
-    ///
-    /// * requires `storage` argument defined
     #[arg(long)]
     pub preload_regex: Option<Regex>,
 

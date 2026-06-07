@@ -223,7 +223,7 @@ async fn main() -> Result<()> {
                                 config.initial_peer.clone()
                             }
                         },
-                        list_only: false,
+                        list_only: preload.regex.is_none(),
                         // the destination folder to preload files match `preload_regex`
                         // * e.g. images for audio albums
                         output_folder: preload.tmp_dir(&h, true)?.to_str().map(|s| s.to_string()),
@@ -234,7 +234,14 @@ async fn main() -> Result<()> {
             .await
             {
                 Ok(r) => match r {
+                    Ok(AddTorrentResponse::ListOnly(l)) => {
+                        assert!(preload.regex.is_none());
+                        debug!("persist bytes for torrent file `{h}`...");
+                        preload.commit(&h, l.torrent_bytes.to_vec(), None)?;
+                        info!("torrent `{h}` resolved.")
+                    }
                     Ok(AddTorrentResponse::Added(_, mt)) => {
+                        assert!(preload.regex.is_some());
                         assert!(mt.is_paused());
                         let mut keep_files = HashSet::with_capacity(
                             config.preload_max_filecount.unwrap_or_default(),
@@ -264,10 +271,10 @@ async fn main() -> Result<()> {
                                         );
                                         continue;
                                     }
-                                    if preload.regex.as_ref().is_none_or(|r| {
+                                    if preload.regex.as_ref().is_some_and(|r| {
                                         !r.is_match(&info.relative_filename.to_string_lossy())
                                     }) {
-                                        debug!("regex filter, skip file `{id}` for `{h}` at `{}`",
+                                        debug!("regex filter match: skip `{id}` for `{h}` at `{}`",
                                         info.relative_filename.to_string_lossy());
                                         continue;
                                     }
@@ -302,7 +309,7 @@ async fn main() -> Result<()> {
                         preload.commit(&h, bytes, Some(keep_files))?;
                         info!("torrent `{h}` resolved.")
                     }
-                    Ok(_) => panic!(),
+                    Ok(_) => unreachable!(),
                     Err(e) => {
                         warn!("failed to resolve torrent `{h}`: `{e}`, ban for the next queue.");
                         assert!(ban.insert(i))
