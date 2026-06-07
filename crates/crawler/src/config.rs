@@ -16,6 +16,16 @@ pub struct Config {
     #[arg(long, short)]
     pub full_scrape: Vec<String>,
 
+    /// How long to wait for I2P tracker full scrape response
+    /// * by compiling OpenTracker for `/scrape`,
+    ///   please make sure `FEATURES+=-DWANT_FULLSCRAPE` is enabled!
+    #[arg(long, default_value_t = 15)]
+    pub full_scrape_timeout: u64,
+
+    /// Compact long data
+    #[arg(long, default_value = "gzip")]
+    pub full_scrape_compression: String,
+
     /// The P2P Blocklist file URL (to filter outgoing connections)
     ///
     /// * use `--blocklist=file:///path/to/blocklist.txt` format for the local path
@@ -94,6 +104,41 @@ pub struct Config {
     /// when the specified value in seconds is reached
     ///
     /// * the ban time is dynamically calculated based on the current ban list collected
+    /// * tip: increase this value when using I2P features
     #[arg(long, default_value_t = 60)]
     pub timeout: u64,
+
+    /// Special trackers such as [opentracker-i2p](https://github.com/r4sas/opentracker-i2p)
+    /// that return B32 addresses instead of IP
+    #[cfg(feature = "i2p")]
+    #[arg(long)]
+    pub i2p_tracker: Vec<Url>,
+
+    /// How long to wait for I2P tracker announce response
+    #[cfg(feature = "i2p")]
+    #[arg(long, default_value_t = 10)]
+    pub i2p_tracker_announce_timeout: u64,
+
+    /// Absolute path(s) or URL(s) to the BEP 48 / Full Scrape for i2p_tracker(s)
+    /// * by compiling OpenTracker for `/scrape`,
+    ///   please make sure `FEATURES+=-DWANT_FULLSCRAPE` is enabled!
+    #[cfg(feature = "i2p")]
+    #[arg(long, short)]
+    pub i2p_full_scrape: Vec<String>,
+
+    /// How long to wait for I2P tracker full scrape response
+    #[cfg(feature = "i2p")]
+    #[arg(long, default_value_t = 10)]
+    pub i2p_full_scrape_timeout: u64,
+
+    /// Compact long data
+    #[cfg(feature = "i2p")]
+    #[arg(long, default_value = "gzip")]
+    pub i2p_full_scrape_compression: String,
+
+    /// Use HTTP(s) proxy to resolve `i2p_tracker` and `i2p_full_scrape`, usually `http://127.0.0.1:4444`
+    /// * skip this setting if the I2P tracker is running locally (for the performance reasons)
+    #[cfg(feature = "i2p")]
+    #[arg(long)]
+    pub i2p_proxy: Option<Url>,
 }

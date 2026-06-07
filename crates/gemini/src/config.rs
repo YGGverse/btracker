@@ -20,9 +20,13 @@ pub struct Config {
     #[arg(short, long, default_value_t = String::from("%Y/%m/%d"))]
     pub format_date: String,
 
-    /// Tracker(s) to join / scrape requests
+    /// Tracker(s) to public announce
     #[arg(short, long)]
     pub tracker: Option<Vec<Url>>,
+
+    /// Scrape(s) to local peers count resolve
+    #[arg(short, long)]
+    pub scrape: Option<Vec<Url>>,
 
     /// Bind server `host:port` to listen incoming connections on it
     #[arg(short, long, default_value_t = SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::LOCALHOST, 1965)))]

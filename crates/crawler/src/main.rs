@@ -1,6 +1,9 @@
 mod config;
 mod full_scrape;
 
+#[cfg(feature = "i2p")]
+mod i2p;
+
 use anyhow::Result;
 use librqbit::{
     AddTorrent, AddTorrentOptions, AddTorrentResponse, ConnectionOptions, DhtSessionConfig,
@@ -90,17 +93,51 @@ async fn main() -> Result<()> {
         let mut queue = HashSet::with_capacity(config.index_capacity);
         for source in &config.full_scrape {
             debug!("index source `{source}`...");
-            for i in match full_scrape::get(source, config.index_capacity).await {
+            for i in match full_scrape::get(
+                source,
+                config.index_capacity,
+                Duration::from_secs(config.full_scrape_timeout),
+                &config.full_scrape_compression,
+                None,
+            )
+            .await
+            {
                 Ok(i) => {
                     debug!("fetch `{}` hashes from `{source}`...", i.len());
                     i
                 }
                 Err(e) => {
-                    warn!("the feed `{source}` update failed: `{e}`; skip.");
+                    warn!("the full scrape `{source}` update failed: `{e}`; skip.");
                     continue; // skip without panic
                 }
             } {
                 queue.insert(i);
+            }
+        }
+        #[cfg(feature = "i2p")]
+        {
+            for source in &config.i2p_full_scrape {
+                debug!("index I2P source `{source}`...");
+                for i in match full_scrape::get(
+                    source,
+                    config.index_capacity,
+                    Duration::from_secs(config.i2p_full_scrape_timeout),
+                    &config.i2p_full_scrape_compression,
+                    config.i2p_proxy.as_ref().map(|p| p.as_str()),
+                )
+                .await
+                {
+                    Ok(i) => {
+                        debug!("fetch `{}` hashes from I2P `{source}`...", i.len());
+                        i
+                    }
+                    Err(e) => {
+                        warn!("I2P full scrape `{source}` update failed: `{e}`; skip.");
+                        continue; // skip without panic
+                    }
+                } {
+                    queue.insert(i);
+                }
             }
         }
 
@@ -135,6 +172,8 @@ async fn main() -> Result<()> {
                 debug!("torrent `{h}` is banned, skip for this queue.");
                 continue;
             }
+            // init unique peers hash table
+
             info!("resolve `{h}`...");
             // run the crawler in single thread for performance reasons,
             // use `timeout` argument option to skip the dead connections.
@@ -153,7 +192,37 @@ async fn main() -> Result<()> {
                         paused: true, // continue after `only_files` update
                         overwrite: true,
                         disable_trackers: config.tracker.is_empty(),
-                        initial_peers: config.initial_peer.clone(),
+                        initial_peers: {
+                            #[cfg(feature = "i2p")]
+                            {
+                                let mut peers: HashSet<std::net::SocketAddr> = config
+                                    .initial_peer
+                                    .as_ref()
+                                    .map(|p| p.iter().cloned().collect())
+                                    .unwrap_or_default();
+                                match i2p::get_peers(
+                                    &i.0,
+                                    &config.i2p_tracker,
+                                    config.i2p_tracker_announce_timeout,
+                                    config.i2p_proxy.as_ref(),
+                                )
+                                .await
+                                {
+                                    Ok(p) => peers.extend(p),
+                                    Err(e) => warn!("{e}"),
+                                }
+                                if peers.is_empty() {
+                                    None
+                                } else {
+                                    trace!("Collected {} unique peers to handle", peers.len());
+                                    Some(peers.into_iter().collect())
+                                }
+                            }
+                            #[cfg(not(feature = "i2p"))]
+                            {
+                                config.initial_peer.clone()
+                            }
+                        },
                         list_only: false,
                         // the destination folder to preload files match `preload_regex`
                         // * e.g. images for audio albums
@@ -247,9 +316,7 @@ async fn main() -> Result<()> {
                 }
             }
         }
-
         session.stop().await;
-
         info!(
             "queue completed at {time_queue} (time: {} / uptime: {} / banned: {}) await {} seconds to continue...",
             Local::now()

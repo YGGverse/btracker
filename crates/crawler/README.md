@@ -6,4 +6,5 @@
 SSD-friendly FS crawler of BEP 48 / Full Scrape, based on the [librqbit](https://github.com/ikatson/rqbit/tree/main/crates/librqbit) resolver
 
 > [!NOTE]
-> By using OpenTracker as the scrape source, please make sure `FEATURES+=-DWANT_FULLSCRAPE` is enabled!
+> * By using OpenTracker as the index source, please make sure `FEATURES+=-DWANT_FULLSCRAPE` is enabled!
+> * Enable experimental I2P support by `cargo build --features i2p`

@@ -1,0 +1,5 @@
+{
+    "rust-analyzer.cargo.features": [
+        "btracker-crawler/i2p"
+    ]
+}

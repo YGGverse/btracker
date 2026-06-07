@@ -1,2 +1,4 @@
 /target
 /templates
+/.vscode/*
+!/.vscode/settings.json
