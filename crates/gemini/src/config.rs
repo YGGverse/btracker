@@ -25,7 +25,7 @@ pub struct Config {
     pub tracker: Option<Vec<Url>>,
 
     /// Scrape(s) to local peers count resolve
-    #[arg(short, long)]
+    #[arg(short = 's', long)]
     pub scrape: Option<Vec<Url>>,
 
     /// Bind server `host:port` to listen incoming connections on it
@@ -41,7 +41,7 @@ pub struct Config {
     pub password: String,
 
     /// btracker-fs directory
-    #[arg(short, long)]
+    #[arg(short = 'S', long)]
     pub storage: PathBuf,
 
     /// Listing items limit
