@@ -4,20 +4,24 @@ mod route;
 
 use anyhow::Result;
 use btracker_fs::public::{Order, Sort, Storage, Torrent};
+use btracker_scrape::Buffer as Scrape;
 use config::Config;
 use librqbit_core::torrent_metainfo::{TorrentMetaV1Owned, torrent_from_bytes};
 use log::*;
 use native_tls::{HandshakeError, Identity, TlsAcceptor, TlsStream};
 use std::{
+    collections::HashMap,
     fs::File,
     io::{Read, Write},
-    net::{IpAddr, SocketAddr, TcpListener, TcpStream},
+    net::{SocketAddr, TcpListener, TcpStream},
     path::PathBuf,
     sync::Arc,
     thread,
 };
+use tokio::sync::RwLock;
 
-fn main() -> Result<()> {
+#[tokio::main]
+async fn main() -> Result<()> {
     use chrono::Local;
     use clap::Parser;
 
@@ -38,35 +42,13 @@ fn main() -> Result<()> {
     let config = Config::parse();
     let state = Arc::new(State {
         public: Storage::init(&config.storage, config.limit, config.capacity).unwrap(),
-        scrape: Scrape::init(
-            config
-                .scrape
-                .as_ref()
-                .map(|u| {
-                    u.iter()
-                        .map(|url| {
-                            use std::str::FromStr;
-                            if url.scheme() == "tcp" {
-                                todo!("TCP scrape is not implemented")
-                            }
-                            if url.scheme() != "udp" {
-                                todo!("Scheme `{}` is not supported", url.scheme())
-                            }
-                            SocketAddr::new(
-                                IpAddr::from_str(
-                                    url.host_str()
-                                        .expect("Required valid host value")
-                                        .trim_start_matches('[')
-                                        .trim_end_matches(']'),
-                                )
-                                .unwrap(),
-                                url.port().expect("Required valid port value"),
-                            )
-                        })
-                        .collect()
-                })
-                .map(|a| (config.udp, a)),
-        ),
+        scrape: Scrape::new(
+            config.scrape,
+            config.scrape_timeout,
+            config.scrape_proxy.as_ref(),
+            config.scrape_proxy_i2p.as_ref(),
+        )
+        .unwrap(),
         format_date: config.format_date,
         name: config.name,
         description: config.description,
@@ -103,7 +85,7 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn handle(
+async fn handle(
     state: Arc<State>,
     peer: SocketAddr,
     connection: Result<TlsStream<TcpStream>, HandshakeError<TcpStream>>,
@@ -143,7 +125,7 @@ fn handle(
                         if header_buffer.last().is_some_and(|&b| b == b'\n') {
                             // header bytes contain valid Gemini **request**
                             if let Ok(request) = request::Gemini::from_bytes(&header_buffer) {
-                                return response(request, &state, &peer, &mut stream);
+                                return response(request, &state, &peer, &mut stream).await;
                             }
 
                             // header bytes received but yet could not be parsed,
@@ -179,7 +161,7 @@ fn handle(
     }
 }
 
-fn response(
+async fn response(
     request: titanite::request::Gemini,
     state: &State,
     peer: &SocketAddr,
@@ -218,7 +200,7 @@ fn response(
                 },
             }
             .into_bytes(),
-            Route::List { page, keyword } => match list(state, keyword.as_deref(), page) {
+            Route::List { page, keyword } => match list(state, keyword.as_deref(), page).await {
                 Ok(data) => success::Default {
                     data: data.as_bytes(),
                     meta: success::default::Meta {
@@ -239,7 +221,7 @@ fn response(
             })
             .into_bytes(),
             Route::Info(id) => match state.public.torrent(id) {
-                Some(torrent) => match info(state, torrent) {
+                Some(torrent) => match info(state, torrent).await {
                     Ok(data) => success::Default {
                         data: data.as_bytes(),
                         meta: success::default::Meta {
@@ -301,33 +283,41 @@ fn send(data: &[u8], stream: &mut TlsStream<TcpStream>, callback: impl FnOnce(Re
     })());
 }
 
-fn list(state: &State, keyword: Option<&str>, page: Option<usize>) -> Result<String> {
-    use std::{cell::RefCell, collections::HashMap, rc::Rc};
-
+async fn list(state: &State, keyword: Option<&str>, page: Option<usize>) -> Result<String> {
     /// format search keyword as the pagination query
     fn query(keyword: Option<&str>) -> String {
         keyword.map(|k| format!("?{}", k)).unwrap_or_default()
     }
 
-    let scrape_index: Rc<RefCell<HashMap<librqbit_core::Id20, btracker_scrape::Result>>> =
-        Rc::new(RefCell::new(HashMap::new())); // scrape info-hashes once
+    let scrape_index: Arc<RwLock<HashMap<librqbit_core::Id20, btracker_scrape::Result>>> =
+        Arc::new(RwLock::new(HashMap::new())); // scrape info-hashes once
 
-    let result = state.public.torrents(
-        keyword,
-        Some((Sort::Modified, Order::Desc)),
-        page.map(|p| if p > 0 { p - 1 } else { p } * state.public.default_limit),
-        Some(state.public.default_limit),
-        {
-            let si = scrape_index.clone();
-            move |id| {
-                state.scrape.get(id.0).is_none_or(|s| {
-                    let is_active = s.leechers > 0 || s.peers > 0 || s.seeders > 0;
-                    assert!(si.borrow_mut().insert(id, s).is_none());
-                    keyword.is_some() || is_active // show all torrents on search request or hide inactive
-                })
-            }
-        },
-    )?;
+    let result = state
+        .public
+        .torrents(
+            keyword,
+            Some((Sort::Modified, Order::Desc)),
+            page.map(|p| if p > 0 { p - 1 } else { p } * state.public.default_limit),
+            Some(state.public.default_limit),
+            {
+                let si = scrape_index.clone();
+                let keyword_exists = keyword.is_some();
+
+                move |id20| {
+                    let si = si.clone();
+                    async move {
+                        if let Ok(s) = state.scrape.get(id20).await {
+                            let is_active = s.incomplete > 0 || s.downloaded > 0 || s.complete > 0;
+                            assert!(si.write().await.insert(id20, s).is_none());
+                            keyword_exists || is_active
+                        } else {
+                            keyword_exists
+                        }
+                    }
+                }
+            },
+        )
+        .await?;
 
     let mut b = Vec::new();
 
@@ -366,7 +356,7 @@ fn list(state: &State, keyword: Option<&str>, page: Option<usize>) -> Result<Str
     if result.list.is_empty() {
         b.push("Nothing.\n".into())
     } else {
-        let mut si = scrape_index.borrow_mut();
+        let mut si = scrape_index.write().await;
         for torrent in result.list {
             let i: TorrentMetaV1Owned = torrent_from_bytes(&torrent.bytes)?;
             b.push(format!(
@@ -379,14 +369,17 @@ fn list(state: &State, keyword: Option<&str>, page: Option<usize>) -> Result<Str
                     .unwrap_or_default()
             ));
             b.push(format!(
-                "{} • {} • {}{}\n",
+                "{} • {} • {}",
                 torrent.time.format(&state.format_date),
                 format::total(&i),
-                format::files(&i),
-                si.remove(&i.info_hash)
-                    .map(|s| format!(" • ↑ {} ↓ {} ⏲ {}", s.seeders, s.peers, s.leechers))
-                    .unwrap_or_default()
+                format::files(&i)
             ));
+            if let Some(s) = si.remove(&i.info_hash) {
+                b.push(format!(
+                    " • ↑ {} ↓ {} ⏲ {}",
+                    s.complete, s.downloaded, s.incomplete
+                ))
+            }
         }
     }
 
@@ -434,7 +427,7 @@ fn list(state: &State, keyword: Option<&str>, page: Option<usize>) -> Result<Str
     Ok(b.join("\n"))
 }
 
-fn info(state: &State, torrent: Torrent) -> Result<String> {
+async fn info(state: &State, torrent: Torrent) -> Result<String> {
     struct File {
         path: Option<PathBuf>,
         length: u64,
@@ -462,16 +455,13 @@ fn info(state: &State, torrent: Torrent) -> Result<String> {
         state.name
     ));
 
+    let t = state.scrape.get(i.info_hash).await.unwrap_or_default();
     b.push(format!(
         "{} • {} • {}{}\n",
         torrent.time.format(&state.format_date),
         format::total(&i),
         format::files(&i),
-        state
-            .scrape
-            .get(i.info_hash.0)
-            .map(|s| format!(" • ↑ {} ↓ {} ⏲ {}", s.seeders, s.peers, s.leechers))
-            .unwrap_or_default()
+        format!(" • ↑ {} ↓ {} ⏲ {}", t.complete, t.downloaded, t.incomplete)
     ));
 
     b.push(format!(
