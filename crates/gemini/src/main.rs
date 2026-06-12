@@ -457,11 +457,13 @@ async fn info(state: &State, torrent: Torrent) -> Result<String> {
 
     let t = state.scrape.get(&[i.info_hash.0]).await.unwrap_or_default();
     b.push(format!(
-        "{} • {} • {}{}\n",
+        "{} • {} • {} • ↑ {} ↓ {} ⏲ {}\n",
         torrent.time.format(&state.format_date),
         format::total(&i),
         format::files(&i),
-        format!(" • ↑ {} ↓ {} ⏲ {}", t.complete, t.downloaded, t.incomplete)
+        t.complete,
+        t.downloaded,
+        t.incomplete
     ));
 
     b.push(format!(
