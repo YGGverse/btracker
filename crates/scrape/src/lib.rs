@@ -1,6 +1,5 @@
 use anyhow::{Result as R, bail};
 use btpeer::http::response::scrape::Total;
-use librqbit_core::Id20;
 use std::time::Duration;
 use url::Url;
 
@@ -40,9 +39,9 @@ impl Scrape {
         })
     }
 
-    pub async fn get(&self, id20: Id20) -> R<Total> {
+    pub async fn get(&self, id20: &[[u8; 20]]) -> R<Total> {
         Ok(btpeer::http::scrape(
-            &btpeer::http::query::Scrape::new(self.tracker.as_str(), Some(&[id20.0]))?,
+            &btpeer::http::query::Scrape::new(self.tracker.as_str(), Some(id20))?,
             self.timeout,
             self.proxy.as_deref(),
         )
@@ -74,7 +73,7 @@ impl Buffer {
         Ok(Self(this))
     }
 
-    pub async fn get(&self, id20: Id20) -> R<Total> {
+    pub async fn get(&self, id20: &[[u8; 20]]) -> R<Total> {
         let mut total = Total::default();
 
         for this in self.0.iter() {

@@ -289,7 +289,7 @@ async fn list(state: &State, keyword: Option<&str>, page: Option<usize>) -> Resu
         keyword.map(|k| format!("?{}", k)).unwrap_or_default()
     }
 
-    let scrape_index: Arc<RwLock<HashMap<librqbit_core::Id20, btracker_scrape::Result>>> =
+    let scrape_index: Arc<RwLock<HashMap<[u8; 20], btracker_scrape::Result>>> =
         Arc::new(RwLock::new(HashMap::new())); // scrape info-hashes once
 
     let result = state
@@ -306,9 +306,9 @@ async fn list(state: &State, keyword: Option<&str>, page: Option<usize>) -> Resu
                 move |id20| {
                     let si = si.clone();
                     async move {
-                        if let Ok(s) = state.scrape.get(id20).await {
+                        if let Ok(s) = state.scrape.get(&[id20.0]).await {
                             let is_active = s.incomplete > 0 || s.downloaded > 0 || s.complete > 0;
-                            assert!(si.write().await.insert(id20, s).is_none());
+                            assert!(si.write().await.insert(id20.0, s).is_none());
                             keyword_exists || is_active
                         } else {
                             keyword_exists
@@ -374,7 +374,7 @@ async fn list(state: &State, keyword: Option<&str>, page: Option<usize>) -> Resu
                 format::total(&i),
                 format::files(&i)
             ));
-            if let Some(s) = si.remove(&i.info_hash) {
+            if let Some(s) = si.remove(&i.info_hash.0) {
                 b.push(format!(
                     " • ↑ {} ↓ {} ⏲ {}",
                     s.complete, s.downloaded, s.incomplete
@@ -455,7 +455,7 @@ async fn info(state: &State, torrent: Torrent) -> Result<String> {
         state.name
     ));
 
-    let t = state.scrape.get(i.info_hash).await.unwrap_or_default();
+    let t = state.scrape.get(&[i.info_hash.0]).await.unwrap_or_default();
     b.push(format!(
         "{} • {} • {}{}\n",
         torrent.time.format(&state.format_date),
