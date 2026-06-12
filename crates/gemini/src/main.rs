@@ -4,7 +4,6 @@ mod route;
 
 use anyhow::Result;
 use btracker_fs::public::{Order, Sort, Storage, Torrent};
-use btracker_scrape::*;
 use config::Config;
 use librqbit_core::torrent_metainfo::{TorrentMetaV1Owned, torrent_from_bytes};
 use log::*;

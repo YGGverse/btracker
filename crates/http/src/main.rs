@@ -9,7 +9,6 @@ mod scrape;
 mod torrent;
 
 use btracker_fs::public::{Order, Sort, Storage};
-use btracker_scrape::Scrape;
 use config::Config;
 use feed::Feed;
 use info_hash::InfoHash;

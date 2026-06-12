@@ -5,7 +5,6 @@ members = [
     "crates/fs",
     "crates/gemini",
     "crates/http",
-    "crates/scrape",
 ]
 
 default-members = [
@@ -13,7 +12,6 @@ default-members = [
     "crates/fs",
     "crates/gemini",
     "crates/http",
-    "crates/scrape",
 ]
 
 [patch.crates-io]
@@ -23,5 +21,5 @@ default-members = [
 #librqbit = { git = "https://github.com/ikatson/rqbit.git", rev="ba07a75c9ad3bbb5e1d8aa8dee815ce8820fe372", package = "librqbit" }
 #librqbit = { version = "9.0.0-beta.1", path = "../../rqbit/crates/librqbit", package = "librqbit" }
 
-btpeer = { git = "https://codeberg.org/YGGverse/btpeer.git" }
+#btpeer = { git = "https://codeberg.org/YGGverse/btpeer.git" }
 #btpeer = { path = "../../codeberg/yggverse/btpeer" }

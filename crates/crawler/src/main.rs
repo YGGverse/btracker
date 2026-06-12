@@ -1,25 +1,22 @@
 mod config;
 mod full_scrape;
-
-#[cfg(feature = "i2p")]
-mod i2p;
+mod tracker;
 
 use anyhow::Result;
+use btracker_fs::crawler::Storage;
+use chrono::Local;
+use clap::Parser;
+use config::Config;
 use librqbit::{
     AddTorrent, AddTorrentOptions, AddTorrentResponse, ConnectionOptions, DhtSessionConfig,
     Session, SessionOptions,
 };
+use log::*;
 use std::{collections::HashSet, num::NonZero, time::Duration};
-use url::Url;
+use tokio::time;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    use btracker_fs::crawler::Storage;
-    use chrono::Local;
-    use clap::Parser;
-    use config::Config;
-    use log::*;
-    use tokio::time;
     // debug
     if std::env::var("RUST_LOG").is_ok() {
         use tracing_subscriber::{EnvFilter, fmt::*};
@@ -44,6 +41,20 @@ async fn main() -> Result<()> {
         config.preload_max_filesize,
     )
     .unwrap();
+    // prepare config to get unique info-hashes for crawl
+    let full_scrape = full_scrape::Buffer::new(
+        config.full_scrape,
+        config.full_scrape_timeout,
+        config.full_scrape_proxy.as_ref(),
+        config.full_scrape_proxy_i2p.as_ref(),
+    )?;
+    // prepare config to get peers for data preload
+    let tracker = tracker::Buffer::new(
+        config.tracker_announce,
+        config.tracker_announce_timeout,
+        config.tracker_announce_proxy.as_ref(),
+        config.tracker_announce_proxy_i2p.as_ref(),
+    )?;
 
     let mut ban = HashSet::with_capacity(config.index_capacity);
     info!("crawler started at {time_init}");
@@ -64,7 +75,7 @@ async fn main() -> Result<()> {
                 listen: None,
                 connect: Some(ConnectionOptions {
                     enable_tcp: !config.disable_tcp,
-                    proxy_url: config.proxy_url.as_ref().map(|u| u.to_string()),
+                    proxy_url: config.proxy.as_ref().map(|u| u.to_string()),
                     ..ConnectionOptions::default()
                 }),
                 dht: if config.enable_dht {
@@ -83,64 +94,13 @@ async fn main() -> Result<()> {
                     download_bps: config.download_limit.and_then(NonZero::new),
                     ..librqbit::limits::LimitsConfig::default()
                 },
-                trackers: config.tracker.iter().cloned().collect(),
+                trackers: HashSet::new(), // we're resolving peers manually
                 ..SessionOptions::default()
             },
         )
         .await?;
-
         // build unique ID index from the multiple info-hash sources
-        let mut queue = HashSet::with_capacity(config.index_capacity);
-        for source in &config.full_scrape {
-            debug!("index source `{source}`...");
-            for i in match full_scrape::get(
-                source,
-                config.index_capacity,
-                Duration::from_secs(config.full_scrape_timeout),
-                &config.full_scrape_compression,
-                None,
-            )
-            .await
-            {
-                Ok(i) => {
-                    debug!("fetch `{}` hashes from `{source}`...", i.len());
-                    i
-                }
-                Err(e) => {
-                    warn!("the full scrape `{source}` update failed: `{e}`; skip.");
-                    continue; // skip without panic
-                }
-            } {
-                queue.insert(i);
-            }
-        }
-        #[cfg(feature = "i2p")]
-        {
-            for source in &config.i2p_full_scrape {
-                debug!("index I2P source `{source}`...");
-                for i in match full_scrape::get(
-                    source,
-                    config.index_capacity,
-                    Duration::from_secs(config.i2p_full_scrape_timeout),
-                    &config.i2p_full_scrape_compression,
-                    config.i2p_proxy.as_ref().map(|p| p.as_str()),
-                )
-                .await
-                {
-                    Ok(i) => {
-                        debug!("fetch `{}` hashes from I2P `{source}`...", i.len());
-                        i
-                    }
-                    Err(e) => {
-                        warn!("I2P full scrape `{source}` update failed: `{e}`; skip.");
-                        continue; // skip without panic
-                    }
-                } {
-                    queue.insert(i);
-                }
-            }
-        }
-
+        let queue = full_scrape.get(config.index_capacity).await?;
         // clean up nonexistent ban entries from the memory pool
         ban.retain(|i| {
             let is_retain = queue.contains(i);
@@ -152,12 +112,10 @@ async fn main() -> Result<()> {
             }
             is_retain
         });
-
         // handle
         debug!(
-            "fetched {} unique hashes from {} source, banned: {}.",
+            "fetched {} unique hashes, banned: {}.",
             queue.len(),
-            config.full_scrape.len(),
             ban.len()
         );
         for i in queue {
@@ -180,49 +138,23 @@ async fn main() -> Result<()> {
             match time::timeout(
                 Duration::from_secs(config.timeout),
                 session.add_torrent(
-                    AddTorrent::from_url(magnet(
-                        &h,
-                        if config.tracker.is_empty() {
-                            None
-                        } else {
-                            Some(config.tracker.as_ref())
-                        },
-                    )),
+                    AddTorrent::from_url(tracker.magnet(&h)),
                     Some(AddTorrentOptions {
                         paused: true, // continue after `only_files` update
                         overwrite: true,
-                        disable_trackers: config.tracker.is_empty(),
-                        initial_peers: {
-                            #[cfg(feature = "i2p")]
-                            {
-                                let mut peers: HashSet<std::net::SocketAddr> = config
-                                    .initial_peer
-                                    .as_ref()
-                                    .map(|p| p.iter().cloned().collect())
-                                    .unwrap_or_default();
-                                match i2p::get_peers(
-                                    &i.0,
-                                    &config.i2p_tracker,
-                                    config.i2p_tracker_announce_timeout,
-                                    config.i2p_proxy.as_ref(),
+                        disable_trackers: true, // we're resolving peers manually
+                        initial_peers: Some(
+                            tracker
+                                .peers(
+                                    &i,
+                                    config.tracker_announce_port,
+                                    config.initial_peer.as_ref(),
                                 )
                                 .await
-                                {
-                                    Ok(p) => peers.extend(p),
-                                    Err(e) => warn!("{e}"),
-                                }
-                                if peers.is_empty() {
-                                    None
-                                } else {
-                                    trace!("Collected {} unique peers to handle", peers.len());
-                                    Some(peers.into_iter().collect())
-                                }
-                            }
-                            #[cfg(not(feature = "i2p"))]
-                            {
-                                config.initial_peer.clone()
-                            }
-                        },
+                                .unwrap() // @TODO
+                                .into_iter()
+                                .collect(),
+                        ),
                         list_only: preload.regex.is_none(),
                         // the destination folder to preload files match `preload_regex`
                         // * e.g. images for audio albums
@@ -337,16 +269,4 @@ async fn main() -> Result<()> {
         );
         std::thread::sleep(Duration::from_secs(config.sleep))
     }
-}
-
-/// Build magnet URI (`librqbit` impl dependency)
-fn magnet(info_hash: &str, trackers: Option<&Vec<Url>>) -> String {
-    let mut m = format!("magnet:?xt=urn:btih:{info_hash}");
-    if let Some(t) = trackers {
-        for tracker in t {
-            m.push_str("&tr=");
-            m.push_str(&urlencoding::encode(tracker.as_str()))
-        }
-    }
-    m
 }

@@ -42,9 +42,7 @@ See the [Wiki](https://github.com/YGGverse/btracker/wiki/Screenshots) page
     * [ ] announce
     * [ ] announce list
 * [x] Common features
-    * [x] scrape peers/seeders/leechers (by the [btracker-scrape](https://github.com/yggverse/btracker-scrape))
-        * [x] UDP
-        * [ ] TCP
+    * [x] scrape peers/seeders/leechers
     * [x] download
         * [x] magnet link
         * [x] torrent file
