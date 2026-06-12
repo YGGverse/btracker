@@ -1,8 +1,10 @@
-use anyhow::{Result, bail};
+use anyhow::{Result as R, bail};
 use btpeer::http::response::scrape::Total;
 use librqbit_core::Id20;
 use std::time::Duration;
 use url::Url;
+
+pub type Result = Total;
 
 struct Scrape {
     proxy: Option<String>,
@@ -16,7 +18,7 @@ impl Scrape {
         timeout: u64,
         proxy: Option<String>,
         proxy_i2p: Option<String>,
-    ) -> Result<Self> {
+    ) -> R<Self> {
         if !tracker.scheme().starts_with("http") {
             bail!("HTTP trackers only!")
         }
@@ -38,7 +40,7 @@ impl Scrape {
         })
     }
 
-    pub async fn get(&self, id20: Id20) -> Result<Total> {
+    pub async fn get(&self, id20: Id20) -> R<Total> {
         Ok(btpeer::http::scrape(
             &btpeer::http::query::Scrape::new(self.tracker.as_str(), Some(&[id20.0]))?,
             self.timeout,
@@ -57,7 +59,7 @@ impl Buffer {
         timeout: u64,
         proxy: Option<&Url>,
         proxy_i2p: Option<&Url>,
-    ) -> Result<Self> {
+    ) -> R<Self> {
         let mut this = Vec::with_capacity(trackers.len());
 
         for url in trackers {
@@ -72,7 +74,7 @@ impl Buffer {
         Ok(Self(this))
     }
 
-    pub async fn get(&self, id20: Id20) -> Result<Total> {
+    pub async fn get(&self, id20: Id20) -> R<Total> {
         let mut total = Total::default();
 
         for this in self.0.iter() {
