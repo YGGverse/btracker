@@ -20,7 +20,6 @@ cyphernet = { version = "0.5.4", features = ["i2p"] }
 librqbit = { version = "9.0.0-rc.0", features = ["disable-upload"]}
 log = "0.4.30"
 regex = "1.12.3"
-reqwest = "0.13.4"
 tokio = { version = "1.52.3", features = ["full"] }
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 url = "2.5.8"
