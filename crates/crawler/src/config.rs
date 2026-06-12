@@ -77,7 +77,7 @@ pub struct Config {
     #[arg(long, default_value_t = false)]
     pub disable_tcp: bool,
 
-    /// Bind resolver session on specified device name (`tun0`, `mycelium`, etc.)
+    /// Bind librqbit session on specified device name (`tun0`, `mycelium`, etc.)
     #[arg(long)]
     pub bind: Option<String>,
 
@@ -105,7 +105,7 @@ pub struct Config {
     #[arg(long)]
     pub download_limit: Option<u32>, // * reminder: upload feature is not planed by the crawler impl
 
-    /// Use `socks5://[username:password@]host:port` for standard torrent connections
+    /// Use `socks5://[username:password@]host:port` for librqbit connections
     #[arg(long)]
     pub proxy: Option<Url>,
 
