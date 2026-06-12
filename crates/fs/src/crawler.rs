@@ -124,7 +124,7 @@ impl Storage {
 
     /// Check the given hash is contain resolved torrent file
     pub fn contains_torrent(&self, info_hash: &str) -> Result<bool, Error> {
-        Ok(fs::exists(self.torrent(info_hash))?)
+        fs::exists(self.torrent(info_hash))
     }
 
     /// Get absolute path to the torrent file
