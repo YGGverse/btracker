@@ -1,6 +1,6 @@
 use clap::Parser;
 use std::{
-    net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6},
+    net::{IpAddr, Ipv4Addr},
     path::PathBuf,
 };
 use url::Url;
@@ -59,20 +59,21 @@ pub struct Config {
     #[arg(long, short, default_value_t = 8000)]
     pub port: u16,
 
-    /// Bind local UDP socket on given address
-    ///
-    /// * the default UDP server is not in use without the optional `scrape` argument value
-    #[arg(long, default_values_t = vec![
-        SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, 0)),
-        SocketAddr::V6(SocketAddrV6::new(Ipv6Addr::UNSPECIFIED, 0, 0, 0))
-    ])]
-    pub udp: Vec<SocketAddr>,
-
-    /// Scrape given trackers (to display peers/seeders/leechers info)
-    ///
-    /// * supports multi-stack IPv4/IPv6 trackers
+    /// Scrape(s) to local peers count resolve
     #[arg(long)]
-    pub scrape: Option<Vec<Url>>,
+    pub scrape: Vec<Url>,
+
+    /// Timeout to wait for scrape response
+    #[arg(long, default_value_t = 1)]
+    pub scrape_timeout: u64,
+
+    /// Proxy for scrape requests
+    #[arg(long)]
+    pub scrape_proxy: Option<Url>,
+
+    /// Proxy for I2P `tracker` scrape requests
+    #[arg(long)]
+    pub scrape_proxy_i2p: Option<Url>,
 
     /// Configure instance in the debug mode
     #[arg(long, default_value_t = false)]

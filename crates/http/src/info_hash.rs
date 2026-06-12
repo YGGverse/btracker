@@ -27,9 +27,6 @@ impl InfoHash {
     pub fn id20(&self) -> Id20 {
         self.0
     }
-    pub fn bytes20(&self) -> [u8; 20] {
-        self.0.0
-    }
 }
 
 impl<'r> rocket::request::FromParam<'r> for InfoHash {

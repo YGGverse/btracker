@@ -454,17 +454,6 @@ dependencies = [
 
 [[package]]
 name = "btpeer"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aac5305006fe6025da8c66536ccda11ad093c472df832c709671e9717c755a69"
-dependencies = [
- "clap",
- "rand 0.10.1",
- "serde",
-]
-
-[[package]]
-name = "btpeer"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6016195f2a873be5a3d0e2c8d03616de9f45301683334168a9b77d21ba08c489"
@@ -488,8 +477,8 @@ name = "btracker-crawler"
 version = "0.2.0"
 dependencies = [
  "anyhow",
- "btpeer 0.11.0",
- "btracker-fs 0.5.0",
+ "btpeer",
+ "btracker-fs",
  "chrono",
  "clap",
  "cyphernet",
@@ -501,16 +490,6 @@ dependencies = [
  "tracing-subscriber",
  "url",
  "yosemite",
-]
-
-[[package]]
-name = "btracker-fs"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7b70704bdaaa34d4655f6765195ae3da950b5fc2dd2f14cf267defae13b8bea7"
-dependencies = [
- "chrono",
- "librqbit-core 5.0.0",
 ]
 
 [[package]]
@@ -528,7 +507,7 @@ name = "btracker-gemini"
 version = "0.3.0"
 dependencies = [
  "anyhow",
- "btracker-fs 0.5.0",
+ "btracker-fs",
  "btracker-scrape",
  "chrono",
  "clap",
@@ -548,8 +527,9 @@ dependencies = [
 name = "btracker-http"
 version = "0.1.1"
 dependencies = [
- "btpeer 0.1.0",
- "btracker-fs 0.4.0",
+ "btpeer",
+ "btracker-fs",
+ "btracker-scrape",
  "chrono",
  "clap",
  "librqbit-core 5.0.0",
@@ -567,7 +547,7 @@ name = "btracker-scrape"
 version = "0.2.0"
 dependencies = [
  "anyhow",
- "btpeer 0.11.0",
+ "btpeer",
  "url",
 ]
 

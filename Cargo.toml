@@ -2,18 +2,18 @@
 resolver = "2"
 members = [
     "crates/crawler",
-    #"crates/fs",
+    "crates/fs",
     "crates/gemini",
     "crates/http",
-    #"crates/scrape",
+    "crates/scrape",
 ]
 
 default-members = [
     "crates/crawler",
-    #"crates/fs",
+    "crates/fs",
     "crates/gemini",
     "crates/http",
-    #"crates/scrape",
+    "crates/scrape",
 ]
 
 [patch.crates-io]
