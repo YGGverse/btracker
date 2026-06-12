@@ -1,13 +1,15 @@
 [package]
 name = "btracker-scrape"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 license = "MIT"
 readme = "README.md"
 description = "Shared BitTorrent scrape API for the βtracker project components"
-keywords = ["btracker", "bittorrent", "scrape", "udp", "tcp"]
+keywords = ["btracker", "bittorrent", "scrape", "tcp"]
 categories = ["network-programming"]
 repository = "https://github.com/YGGverse/btracker"
 
 [dependencies]
-rand = "0.9.2"
+anyhow = "1.0.95"
+btpeer = "0.11.0"
+url = "2.5.7"

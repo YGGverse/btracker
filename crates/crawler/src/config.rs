@@ -14,17 +14,21 @@ pub struct Config {
 
     /// Absolute path(s) or URL(s) to the BEP 48 / Full Scrape
     #[arg(long, short)]
-    pub full_scrape: Vec<String>,
+    pub full_scrape: Vec<Url>,
 
-    /// How long to wait for I2P tracker full scrape response
-    /// * by compiling OpenTracker for `/scrape`,
-    ///   please make sure `FEATURES+=-DWANT_FULLSCRAPE` is enabled!
+    /// How long to wait for tracker full scrape response
+    /// * tip: by using OpenTracker,
+    ///   make sure `FEATURES+=-DWANT_FULLSCRAPE` is enabled!
     #[arg(long, default_value_t = 15)]
     pub full_scrape_timeout: u64,
 
-    /// Compact long data
-    #[arg(long, default_value = "gzip")]
-    pub full_scrape_compression: String,
+    /// Use HTTP(s) proxy to resolve `full_scrape` trackers, would be `http://127.0.0.1:9050`
+    #[arg(long)]
+    pub full_scrape_proxy: Option<Url>,
+
+    /// Use HTTP(s) proxy to resolve `full_scrape` I2P trackers, would be `http://127.0.0.1:4444`
+    #[arg(long)]
+    pub full_scrape_proxy_i2p: Option<Url>,
 
     /// The P2P Blocklist file URL (to filter outgoing connections)
     ///
@@ -32,9 +36,26 @@ pub struct Config {
     #[arg(long)]
     pub blocklist: Option<Url>,
 
-    /// Define custom tracker(s) to preload the `.torrent` files info
+    /// Define HTTP tracker(s) to preload the `.torrent` files info
     #[arg(long, short)]
-    pub tracker: Vec<Url>,
+    pub tracker_announce: Vec<Url>,
+
+    /// Announce timeout for every info-hash handle
+    /// * increase by using I2P trackers, but keep in mind about global `timeout`
+    #[arg(long, default_value_t = 15)]
+    pub tracker_announce_timeout: u64,
+
+    /// Static port for outgoing announce connections
+    #[arg(long, default_value_t = 6699)]
+    pub tracker_announce_port: u16,
+
+    /// Use HTTP(s) proxy to resolve `full_scrape` trackers, would be `http://127.0.0.1:9050`
+    #[arg(long)]
+    pub tracker_announce_proxy: Option<Url>,
+
+    /// Use HTTP(s) proxy to resolve `full_scrape` I2P trackers, would be `http://127.0.0.1:4444`
+    #[arg(long)]
+    pub tracker_announce_proxy_i2p: Option<Url>,
 
     /// Define initial peer(s) to preload the `.torrent` files info
     #[arg(long)]
@@ -56,7 +77,7 @@ pub struct Config {
     #[arg(long, default_value_t = false)]
     pub disable_tcp: bool,
 
-    /// Bind resolver session on specified device name (`tun0`, `mycelium`, etc.)
+    /// Bind librqbit session on specified device name (`tun0`, `mycelium`, etc.)
     #[arg(long)]
     pub bind: Option<String>,
 
@@ -84,9 +105,9 @@ pub struct Config {
     #[arg(long)]
     pub download_limit: Option<u32>, // * reminder: upload feature is not planed by the crawler impl
 
-    /// Use `socks5://[username:password@]host:port`
+    /// Use `socks5://[username:password@]host:port` for librqbit connections
     #[arg(long)]
-    pub proxy_url: Option<Url>,
+    pub proxy: Option<Url>,
 
     /// Estimated info-hash index capacity
     ///
@@ -105,38 +126,4 @@ pub struct Config {
     /// * tip: increase this value when using I2P features
     #[arg(long, default_value_t = 60)]
     pub timeout: u64,
-
-    /// Special trackers such as [opentracker-i2p](https://github.com/r4sas/opentracker-i2p)
-    /// that return B32 addresses instead of IP
-    #[cfg(feature = "i2p")]
-    #[arg(long)]
-    pub i2p_tracker: Vec<Url>,
-
-    /// How long to wait for I2P tracker announce response
-    #[cfg(feature = "i2p")]
-    #[arg(long, default_value_t = 10)]
-    pub i2p_tracker_announce_timeout: u64,
-
-    /// Absolute path(s) or URL(s) to the BEP 48 / Full Scrape for i2p_tracker(s)
-    /// * by compiling OpenTracker for `/scrape`,
-    ///   please make sure `FEATURES+=-DWANT_FULLSCRAPE` is enabled!
-    #[cfg(feature = "i2p")]
-    #[arg(long, short)]
-    pub i2p_full_scrape: Vec<String>,
-
-    /// How long to wait for I2P tracker full scrape response
-    #[cfg(feature = "i2p")]
-    #[arg(long, default_value_t = 10)]
-    pub i2p_full_scrape_timeout: u64,
-
-    /// Compact long data
-    #[cfg(feature = "i2p")]
-    #[arg(long, default_value = "gzip")]
-    pub i2p_full_scrape_compression: String,
-
-    /// Use HTTP(s) proxy to resolve `i2p_tracker` and `i2p_full_scrape`, usually `http://127.0.0.1:4444`
-    /// * skip this setting if the I2P tracker is running locally (for the performance reasons)
-    #[cfg(feature = "i2p")]
-    #[arg(long)]
-    pub i2p_proxy: Option<Url>,
 }

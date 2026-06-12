@@ -5,11 +5,12 @@ mod config;
 mod feed;
 mod info_hash;
 mod meta;
-mod scrape;
 mod torrent;
 
+use std::sync::Arc;
+
 use btracker_fs::public::{Order, Sort, Storage};
-use btracker_scrape::Scrape;
+use btracker_scrape::Buffer as Scrape;
 use config::Config;
 use feed::Feed;
 use info_hash::InfoHash;
@@ -19,19 +20,28 @@ use rocket::{
     http::{ContentType, Header, Status},
     response::{Responder, Response, content::RawXml},
     serde::Serialize,
+    tokio::sync::RwLock,
 };
 use rocket_dyn_templates::{Template, context};
 use torrent::Torrent;
 
 #[get("/?<search>&<page>")]
-fn index(
+async fn index(
     search: Option<&str>,
     page: Option<usize>,
     scrape: &State<Scrape>,
     storage: &State<Storage>,
     meta: &State<Meta>,
 ) -> Result<Template, Status> {
-    use std::{cell::RefCell, collections::HashMap, rc::Rc};
+    use std::collections::HashMap;
+
+    #[derive(rocket::serde::Serialize, Default)]
+    #[serde(crate = "rocket::serde")]
+    pub struct S {
+        pub leechers: u32,
+        pub peers: u32,
+        pub seeders: u32,
+    }
 
     #[derive(Serialize)]
     #[serde(crate = "rocket::serde")]
@@ -41,13 +51,13 @@ fn index(
         indexed: String,
         magnet: String,
         torrent: String,
-        scrape: Option<scrape::Result>,
+        scrape: Option<S>,
         size: String,
         this: Torrent,
     }
 
-    let scrape_index: Rc<RefCell<HashMap<librqbit_core::Id20, scrape::Result>>> =
-        Rc::new(RefCell::new(HashMap::new())); // scrape info-hashes once
+    let scrape_index: Arc<RwLock<HashMap<librqbit_core::Id20, S>>> =
+        Arc::new(RwLock::new(HashMap::new())); // scrape info-hashes once
 
     let result = storage
         .torrents(
@@ -57,19 +67,61 @@ fn index(
             Some(storage.default_limit),
             {
                 let si = scrape_index.clone();
-                move |id| {
-                    scrape::get(scrape, id.0).is_none_or(|s| {
-                        let is_active = s.leechers > 0 || s.peers > 0 || s.seeders > 0;
-                        assert!(si.borrow_mut().insert(id, s).is_none());
-                        search.is_some() || is_active
-                    })
+                let is_search = search.is_some();
+
+                move |id20| {
+                    let si = si.clone();
+                    async move {
+                        if let Ok(s) = scrape.get(&[id20.0]).await {
+                            let is_active = s.incomplete > 0 || s.downloaded > 0 || s.complete > 0;
+                            assert!(
+                                si.write()
+                                    .await
+                                    .insert(
+                                        id20,
+                                        S {
+                                            leechers: s.incomplete,
+                                            peers: s.downloaded,
+                                            seeders: s.complete
+                                        }
+                                    )
+                                    .is_none()
+                            );
+                            is_search || is_active
+                        } else {
+                            is_search
+                        }
+                    }
                 }
             },
         )
+        .await
         .map_err(|e| {
             error!("Torrents public storage read error: `{e}`");
             Status::InternalServerError
         })?;
+
+    let mut rows = Vec::with_capacity(result.list.len());
+    {
+        let mut scrape_lock = scrape_index.write().await;
+        for t in result.list.into_iter() {
+            match Torrent::from_public(&t.bytes, t.time) {
+                Ok(this) => rows.push(R {
+                    created: this
+                        .creation_date
+                        .map(|t| t.format(&meta.format_time).to_string()),
+                    files: this.files(),
+                    indexed: this.time.format(&meta.format_time).to_string(),
+                    magnet: this.magnet(meta.trackers.as_ref()),
+                    torrent: this.torrent(), // @TODO customize trackers
+                    scrape: scrape_lock.remove(&this.id),
+                    size: this.size(),
+                    this,
+                }),
+                Err(e) => error!("Torrent storage read error: `{e}`"),
+            }
+        }
+    }
 
     Ok(Template::render(
         "index",
@@ -98,37 +150,19 @@ fn index(
             back: page.map(|p| uri!(index(search, if p > 2 { Some(p - 1) } else { None }))),
             next: if page.unwrap_or(1) * storage.default_limit >= result.visible { None }
                     else { Some(uri!(index(search, Some(page.map_or(2, |p| p + 1))))) },
-            rows: result.list
-                .into_iter()
-                .filter_map(|t| match Torrent::from_public(&t.bytes, t.time) {
-                    Ok(this) => Some(R {
-                        created: this.creation_date.map(|t| t.format(&meta.format_time).to_string()),
-                        files: this.files(),
-                        indexed: this.time.format(&meta.format_time).to_string(),
-                        magnet: this.magnet(meta.trackers.as_ref()),
-                        torrent: this.torrent(), // @TODO customize trackers
-                        scrape: scrape_index.borrow_mut().remove(&this.id),
-                        size: this.size(),
-                        this
-                    }),
-                    Err(e) => {
-                        error!("Torrent storage read error: `{e}`");
-                        None
-                    }
-                })
-                .collect::<Vec<R>>(),
             page: page.unwrap_or(1),
             pages: (result.visible as f64 / storage.default_limit as f64).ceil(),
             total: result.total,
             visible: result.visible,
             is_search: search.is_some(),
-            search
+            search,
+            rows
         },
     ))
 }
 
 #[get("/<info_hash>", rank = 1)]
-fn info(
+async fn info(
     info_hash: InfoHash,
     storage: &State<Storage>,
     scrape: &State<Scrape>,
@@ -136,6 +170,13 @@ fn info(
 ) -> Result<Template, Status> {
     match storage.torrent(info_hash.id20()) {
         Some(t) => {
+            #[derive(rocket::serde::Serialize, Default)]
+            #[serde(crate = "rocket::serde")]
+            pub struct S {
+                pub leechers: u32,
+                pub peers: u32,
+                pub seeders: u32,
+            }
             #[derive(Serialize)]
             #[serde(crate = "rocket::serde")]
             struct F {
@@ -177,7 +218,11 @@ fn info(
                     indexed: this.time.format(&meta.format_time).to_string(),
                     magnet: this.magnet(meta.trackers.as_ref()),
                     torrent: this.torrent(), // @TODO customize trackers
-                    scrape: scrape::get(scrape, info_hash.bytes20()),
+                    scrape: scrape.get(&[info_hash.id20().0]).await.ok().map(|s| S {
+                        leechers: s.incomplete,
+                        peers: s.downloaded,
+                        seeders: s.complete
+                    }),
                     size: this.size(),
                     this
                 },
@@ -262,7 +307,7 @@ fn torrent_file(
 }
 
 #[get("/rss")]
-fn rss(
+async fn rss(
     meta: &State<Meta>,
     scrape: &State<Scrape>,
     storage: &State<Storage>,
@@ -279,11 +324,14 @@ fn rss(
             Some((Sort::Modified, Order::Desc)),
             None,
             Some(storage.default_limit),
-            |id| {
-                scrape::get(scrape, id.0)
-                    .is_some_and(|s| s.leechers > 0 || s.peers > 0 || s.seeders > 0)
+            async move |id| {
+                scrape
+                    .get(&[id.0])
+                    .await
+                    .is_ok_and(|s| s.incomplete > 0 || s.downloaded > 0 || s.complete > 0)
             },
         )
+        .await
         .map_err(|e| {
             error!("Torrent storage read error: `{e}`");
             Status::InternalServerError
@@ -305,34 +353,6 @@ fn rocket() -> _ {
     if config.canonical_url.is_none() {
         warn!("Canonical URL option is required for the RSS feed by the specification!") // @TODO
     }
-    let scrape = Scrape::init(
-        config
-            .scrape
-            .map(|u| {
-                u.into_iter()
-                    .map(|url| {
-                        use std::str::FromStr;
-                        if url.scheme() == "tcp" {
-                            todo!("TCP scrape is not implemented")
-                        }
-                        if url.scheme() != "udp" {
-                            todo!("Scheme `{}` is not supported", url.scheme())
-                        }
-                        std::net::SocketAddr::new(
-                            std::net::IpAddr::from_str(
-                                url.host_str()
-                                    .expect("Required valid host value")
-                                    .trim_start_matches('[')
-                                    .trim_end_matches(']'),
-                            )
-                            .unwrap(),
-                            url.port().expect("Required valid port value"),
-                        )
-                    })
-                    .collect()
-            })
-            .map(|a| (config.udp, a)),
-    );
     rocket::build()
         .attach(Template::fairing())
         .configure(rocket::Config {
@@ -344,7 +364,15 @@ fn rocket() -> _ {
                 rocket::Config::release_default()
             }
         })
-        .manage(scrape)
+        .manage(
+            Scrape::new(
+                config.scrape,
+                config.scrape_timeout,
+                config.scrape_proxy.as_ref(),
+                config.scrape_proxy_i2p.as_ref(),
+            )
+            .unwrap(),
+        )
         .manage(Storage::init(&config.public, config.list_limit, config.capacity).unwrap())
         .manage(Meta {
             canonical: config.canonical_url,

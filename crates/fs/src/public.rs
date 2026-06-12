@@ -7,6 +7,7 @@ use chrono::{DateTime, Utc};
 use librqbit_core::Id20;
 use std::{
     fs,
+    future::Future,
     io::Error,
     path::{Path, PathBuf},
     str::FromStr,
@@ -66,32 +67,37 @@ impl Storage {
         })
     }
 
-    pub fn torrents(
+    pub async fn torrents<F, Fut>(
         &self,
         keyword: Option<&str>,
         sort_order: Option<(Sort, Order)>,
         start: Option<usize>,
         limit: Option<usize>,
-        visibility_filter: impl Fn(Id20) -> bool,
-    ) -> Result<Torrents, Error> {
+        visibility_filter: F,
+    ) -> Result<Torrents, Error>
+    where
+        F: Fn(Id20) -> Fut,
+        Fut: Future<Output = bool>,
+    {
         let f = self.files(keyword, sort_order)?;
         let t = f.len(); // total
         let l = limit.unwrap_or(t);
         let s = start.unwrap_or_default();
         let mut b = Vec::with_capacity(l);
         let mut i = 0; // start offset
-        for file in f.iter().filter(|file| {
-            file.path
-                .file_stem()
-                .is_some_and(|n| Id20::from_str(&n.to_string_lossy()).is_ok_and(&visibility_filter))
-        }) {
-            if i >= s && b.len() < l {
-                b.push(Torrent {
-                    bytes: fs::read(&file.path)?,
-                    time: file.modified.into(),
-                })
+        for file in f.iter() {
+            if let Some(n) = file.path.file_stem()
+                && let Ok(id20) = Id20::from_str(&n.to_string_lossy())
+                && visibility_filter(id20).await
+            {
+                if i >= s && b.len() < l {
+                    b.push(Torrent {
+                        bytes: fs::read(&file.path)?,
+                        time: file.modified.into(),
+                    });
+                }
+                i += 1;
             }
-            i += 1
         }
         Ok(Torrents {
             total: t,
