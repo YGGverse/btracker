@@ -7,6 +7,7 @@ use url::Url;
 
 struct Tracker {
     i2p_loopback: Option<SocketAddr>,
+    is_i2p: bool,
     proxy: Option<String>,
     timeout: Duration,
     url: Url,
@@ -23,9 +24,10 @@ impl Tracker {
         if !url.scheme().starts_with("http") {
             bail!("HTTP trackers only!")
         }
+        let is_i2p = url.host_str().unwrap().ends_with(".i2p");
         Ok(Self {
             i2p_loopback,
-            proxy: if url.host_str().unwrap().ends_with(".i2p") {
+            proxy: if is_i2p {
                 if proxy_i2p.is_none() {
                     bail!("I2P proxy is required for tracker `{url}`")
                 }
@@ -42,6 +44,7 @@ impl Tracker {
                 proxy
             },
             timeout: Duration::from_secs(timeout),
+            is_i2p,
             url,
         })
     }
@@ -53,7 +56,7 @@ impl Tracker {
 
         let mut peers = HashSet::new();
 
-        for p in if self.i2p_loopback.is_some() {
+        for p in if self.is_i2p {
             btpeer::http::announce_i2p(&announce, self.timeout, self.proxy.as_deref())
                 .await?
                 .peers
