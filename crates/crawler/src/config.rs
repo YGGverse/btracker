@@ -1,6 +1,9 @@
 use clap::Parser;
 use regex::Regex;
-use std::{net::SocketAddr, path::PathBuf};
+use std::{
+    net::{IpAddr, SocketAddr},
+    path::PathBuf,
+};
 use url::Url;
 
 #[derive(Parser, Debug)]
@@ -57,9 +60,9 @@ pub struct Config {
     #[arg(long)]
     pub tracker_announce_proxy_i2p: Option<Url>,
 
-    /// Bind I2P / SAM bridge on given address (default: `http://127.0.0.1:0`)
+    /// Bind I2P / SAM bridge on given host (default: `127.0.0.1`)
     #[arg(long)]
-    pub tracker_announce_loopback_i2p: Option<SocketAddr>,
+    pub tracker_announce_loopback_i2p: Option<IpAddr>,
 
     /// Define initial peer(s) to preload the `.torrent` files info
     #[arg(long)]

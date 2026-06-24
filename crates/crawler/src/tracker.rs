@@ -17,7 +17,7 @@ enum Tracker {
         url: Url,
     },
     I2p {
-        loopback: SocketAddr,
+        loopback: IpAddr,
         proxy: String,
         timeout: Duration,
         url: Url,
@@ -42,12 +42,7 @@ impl Tracker {
     }
 
     /// Construct I2P tracker
-    pub fn i2p(
-        url: Url,
-        timeout: u64,
-        proxy: String,
-        loopback: Option<SocketAddr>,
-    ) -> Result<Self> {
+    pub fn i2p(url: Url, timeout: u64, proxy: String, loopback: Option<IpAddr>) -> Result<Self> {
         if !url.scheme().starts_with("http") {
             bail!("HTTP trackers only!")
         }
@@ -57,11 +52,14 @@ impl Tracker {
         info!("[tracker] init I2P tracker `{url}` using proxy `{proxy}`");
         Ok(Self::I2p {
             loopback: match loopback {
-                Some(l) => l,
+                Some(ip) => {
+                    debug!("[tracker] loopback address is `{ip}`");
+                    ip
+                }
                 None => {
-                    let l = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), 0);
-                    warn!("[tracker] custom loopback address is not set; use default `{l}`");
-                    l
+                    let ip = IpAddr::V4(Ipv4Addr::LOCALHOST);
+                    warn!("[tracker] loopback address is not configured; use default `{ip}`");
+                    ip
                 }
             },
             proxy,
@@ -138,20 +136,29 @@ impl Tracker {
                     match p {
                         // Create SAM bridge / local proxy as librqbit yet not supported I2P connections
                         Peer::I2p(peer) => {
-                            debug!("[tracker] init I2P loopback on `{loopback}`");
+                            debug!("[tracker] bind proxy listener for `{peer}` on `{loopback}`...");
 
-                            let listener = tokio::net::TcpListener::bind(loopback).await?;
+                            let listener =
+                                tokio::net::TcpListener::bind(SocketAddr::new(*loopback, 0))
+                                    .await?;
+
                             let p = listener.local_addr()?;
 
                             if b.insert(p) {
-                                debug!("[tracker] add I2P peer: `{peer}` with SAM on `{p}`")
+                                debug!(
+                                    "[tracker] bind I2P peer `{peer}` as `{p}`; init SAM session..."
+                                )
                             } else {
                                 debug!(
-                                    "[tracker] replace I2P existing peer: `{peer}` with SAM on `{p}`"
+                                    "[tracker] bind existing I2P peer `{peer}` as `{p}`; init SAM session..."
                                 )
                             }
 
                             let mut session = Session::<Stream>::new(Default::default()).await?;
+
+                            debug!(
+                                "[tracker] listening incoming connections for `{peer}` on `{p}`..."
+                            );
 
                             tokio::spawn(async move {
                                 while let Ok((mut local, client)) = listener.accept().await {
@@ -200,7 +207,7 @@ impl Buffer {
         timeout: u64,
         proxy: Option<&Url>,
         proxy_i2p: Option<&Url>,
-        loopback_i2p: Option<&SocketAddr>,
+        loopback_i2p: Option<&IpAddr>,
     ) -> Result<Self> {
         let mut b = Vec::with_capacity(trackers.len());
         for url in trackers {
