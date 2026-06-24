@@ -130,4 +130,17 @@ pub struct Config {
     /// * tip: increase this value when using I2P features
     #[arg(long, default_value_t = 60)]
     pub timeout: u64,
+
+    /// Consider increasing the `timeout` value by using `timeout_increment`.
+    ///
+    /// Formula: `new timeout = peers found * value in seconds`.
+    #[arg(long)]
+    pub timeout_increment: Option<u64>,
+
+    /// When default peers are missing and I2P trackers are active,
+    /// consider increasing the `timeout` value by using `timeout_increment_i2p`.
+    ///
+    /// Formula: `new timeout = peers found * value in seconds`.
+    #[arg(long)]
+    pub timeout_increment_i2p: Option<u64>,
 }

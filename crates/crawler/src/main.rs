@@ -133,6 +133,9 @@ async fn main() -> Result<()> {
             }
             info!("resolve `{h}`...");
 
+            // init default timeout, but we can increase it later, by appending slow I2P / fallback peers
+            let mut timeout = config.timeout;
+
             // discover unique default peers first, then append I2P peers as the fallback (slow)
             let default_peers = match tracker
                 .peers(
@@ -148,6 +151,13 @@ async fn main() -> Result<()> {
                         None
                     } else {
                         debug!("found {} default peers for torrent `{h}`.", peers.len());
+                        if let Some(t) = config.timeout_increment {
+                            timeout += t + peers.len() as u64;
+                            debug!(
+                                "increase session timeout from {} to {timeout} seconds for.",
+                                config.timeout
+                            )
+                        }
                         Some(peers)
                     }
                 }
@@ -175,6 +185,13 @@ async fn main() -> Result<()> {
                             continue;
                         } else {
                             debug!("found {} I2P peers for torrent `{h}`.", peers.len());
+                            if let Some(t) = config.timeout_increment_i2p {
+                                timeout += t + peers.len() as u64;
+                                debug!(
+                                    "increase session timeout from {} to {timeout} seconds.",
+                                    config.timeout
+                                )
+                            }
                             peers
                         }
                     }
@@ -193,7 +210,7 @@ async fn main() -> Result<()> {
             // run the crawler in single thread for performance reasons,
             // use `timeout` argument option to skip the dead connections.
             match time::timeout(
-                Duration::from_secs(config.timeout),
+                Duration::from_secs(timeout),
                 session.add_torrent(
                     AddTorrent::from_url(tracker.magnet(&h)),
                     Some(AddTorrentOptions {
