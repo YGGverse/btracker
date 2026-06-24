@@ -11,7 +11,7 @@ repository = "https://github.com/yggverse/btracker"
 # homepage = "https://yggverse.github.io"
 
 [dependencies]
-btpeer = "0.11.0"
+btpeer = "0.11.1"
 btracker-fs = { version = "0.5.0", features = ["public"] }
 btracker-scrape = "0.2.0"
 chrono = { version = "0.4.44", features = ["serde"] }

@@ -11,5 +11,5 @@ repository = "https://github.com/YGGverse/btracker"
 
 [dependencies]
 anyhow = "1.0.95"
-btpeer = "0.11.0"
+btpeer = "0.11.1"
 url = "2.5.7"
