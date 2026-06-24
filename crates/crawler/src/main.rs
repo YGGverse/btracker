@@ -268,14 +268,9 @@ async fn main() -> Result<()> {
                         session.update_only_files(&mt, &only_files).await?;
                         session.unpause(&mt).await?;
                         debug!("begin torrent `{h}` preload...");
-                        if let Err(e) = time::timeout(
-                            Duration::from_secs(config.timeout),
-                            mt.wait_until_completed(),
-                        )
-                        .await
-                        {
+                        if let Err(e) = mt.wait_until_completed().await {
                             info!(
-                                "skip awaiting the completion of preload torrent data for `{h}` (`{e}`), ban for the next queue.",
+                                "preload torrent data for `{h}` failed (`{e}`), ban temporarily.",
                             );
                             assert!(ban.insert(i));
                             continue;
@@ -289,13 +284,13 @@ async fn main() -> Result<()> {
                     }
                     Ok(_) => unreachable!(),
                     Err(e) => {
-                        warn!("failed to resolve torrent `{h}`: `{e}`, ban for the next queue.");
+                        warn!("failed to resolve torrent `{h}`: `{e}`, ban temporarily.");
                         assert!(ban.insert(i))
                     }
                 },
                 Err(e) => {
                     info!(
-                        "skip awaiting the completion of adding torrent `{h}` (`{e}`), ban for the next queue."
+                        "skip awaiting the completion of adding torrent `{h}` (`{e}`), ban temporarily."
                     );
                     assert!(ban.insert(i))
                 }
