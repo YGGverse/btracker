@@ -133,8 +133,8 @@ async fn main() -> Result<()> {
             }
             info!("resolve `{h}`...");
 
-            // init unique peers list
-            let initial_peers = match tracker
+            // discover unique default peers first, then append I2P peers as the fallback (slow)
+            let default_peers = match tracker
                 .peers(
                     &i,
                     config.tracker_announce_port,
@@ -144,17 +144,50 @@ async fn main() -> Result<()> {
             {
                 Ok(peers) => {
                     if peers.is_empty() {
-                        debug!("could not find any peer for torrent `{h}`, skip.");
-                        continue;
+                        debug!("could not find any default peers for torrent `{h}`.");
+                        None
                     } else {
-                        peers
+                        debug!("found {} default peers for torrent `{h}`.", peers.len());
+                        Some(peers)
                     }
                 }
                 Err(e) => {
-                    debug!("could not get peers for torrent `{h}`: {e}, skip.");
-                    continue;
+                    warn!("could not get default peers for torrent `{h}`: {e}.");
+                    None
                 }
             };
+
+            let initial_peers = match default_peers {
+                Some(peers) => peers,
+                None => match tracker
+                    .peers_i2p(
+                        &i,
+                        config.tracker_announce_port,
+                        config.initial_peer.as_ref(),
+                    )
+                    .await
+                {
+                    Ok(peers) => {
+                        if peers.is_empty() {
+                            debug!(
+                                "could not find any fallback / I2P peer for torrent `{h}`, skip."
+                            );
+                            continue;
+                        } else {
+                            debug!("found {} I2P peers for torrent `{h}`.", peers.len());
+                            peers
+                        }
+                    }
+                    Err(e) => {
+                        warn!(
+                            "could not get any fallback / I2P peer for torrent `{h}`: {e}, skip."
+                        );
+                        continue;
+                    }
+                },
+            };
+
+            // make sure the list is not empty as unexpected here
             assert!(!initial_peers.is_empty());
 
             // run the crawler in single thread for performance reasons,
