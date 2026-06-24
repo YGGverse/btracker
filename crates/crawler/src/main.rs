@@ -128,12 +128,35 @@ async fn main() -> Result<()> {
             }
             // skip banned entry, remove it from the ban list to retry on the next iteration
             if ban.remove(&i) {
-                debug!("torrent `{h}` is banned, skip for this queue.");
+                debug!("torrent `{h}` is banned, skip.");
                 continue;
             }
-            // init unique peers hash table
-
             info!("resolve `{h}`...");
+
+            // init unique peers list
+            let initial_peers = match tracker
+                .peers(
+                    &i,
+                    config.tracker_announce_port,
+                    config.initial_peer.as_ref(),
+                )
+                .await
+            {
+                Ok(peers) => {
+                    if peers.is_empty() {
+                        debug!("could not find any peer for torrent `{h}`, skip.");
+                        continue;
+                    } else {
+                        peers
+                    }
+                }
+                Err(e) => {
+                    debug!("could not get peers for torrent `{h}`: {e}, skip.");
+                    continue;
+                }
+            };
+            assert!(!initial_peers.is_empty());
+
             // run the crawler in single thread for performance reasons,
             // use `timeout` argument option to skip the dead connections.
             match time::timeout(
@@ -144,18 +167,7 @@ async fn main() -> Result<()> {
                         paused: true, // continue after `only_files` update
                         overwrite: true,
                         disable_trackers: true, // we're resolving peers manually
-                        initial_peers: Some(
-                            tracker
-                                .peers(
-                                    &i,
-                                    config.tracker_announce_port,
-                                    config.initial_peer.as_ref(),
-                                )
-                                .await
-                                .unwrap() // @TODO
-                                .into_iter()
-                                .collect(),
-                        ),
+                        initial_peers: Some(initial_peers.into_iter().collect()),
                         list_only: preload.regex.is_none(),
                         // the destination folder to preload files match `preload_regex`
                         // * e.g. images for audio albums
