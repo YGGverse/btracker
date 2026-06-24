@@ -9,7 +9,7 @@ use clap::Parser;
 use config::Config;
 use librqbit::{
     AddTorrent, AddTorrentOptions, AddTorrentResponse, ConnectionOptions, DhtSessionConfig,
-    Session, SessionOptions,
+    Session, SessionOptions, limits::LimitsConfig,
 };
 use log::*;
 use std::{collections::HashSet, num::NonZero, time::Duration};
@@ -91,9 +91,9 @@ async fn main() -> Result<()> {
                 disable_upload: true,
                 fastresume: false,
                 persistence: None,
-                ratelimits: librqbit::limits::LimitsConfig {
+                ratelimits: LimitsConfig {
                     download_bps: config.download_limit.and_then(NonZero::new),
-                    ..librqbit::limits::LimitsConfig::default()
+                    ..LimitsConfig::default()
                 },
                 trackers: HashSet::new(), // we're resolving peers manually
                 ..SessionOptions::default()
