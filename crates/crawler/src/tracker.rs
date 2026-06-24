@@ -25,6 +25,7 @@ enum Tracker {
 }
 
 impl Tracker {
+    /// Construct default Tracker
     pub fn default(url: Url, timeout: u64, proxy: Option<String>) -> Result<Self> {
         if !url.scheme().starts_with("http") {
             bail!("HTTP trackers only!")
@@ -40,6 +41,7 @@ impl Tracker {
         })
     }
 
+    /// Construct I2P tracker
     pub fn i2p(
         url: Url,
         timeout: u64,
@@ -68,7 +70,13 @@ impl Tracker {
         })
     }
 
-    pub async fn peers(&self, info_hash: &Id20, announce_port: u16) -> Result<HashSet<SocketAddr>> {
+    /// Get peers by `info_hash` from Trackers
+    pub async fn peers(
+        &self,
+        info_hash: &Id20,
+        announce_port: u16,
+        limit_per_kind: Option<usize>,
+    ) -> Result<HashSet<SocketAddr>> {
         Ok(match self {
             Self::Default {
                 proxy,
@@ -78,10 +86,13 @@ impl Tracker {
                 let announce =
                     btpeer::http::query::Announce::new(url.as_str(), &info_hash.0, announce_port)?;
 
-                let peers = btpeer::http::announce(&announce, *timeout, proxy.as_deref())
-                    .await?
-                    .peers
-                    .0;
+                let peers = take_random_peers(
+                    btpeer::http::announce(&announce, *timeout, proxy.as_deref())
+                        .await?
+                        .peers
+                        .0,
+                    limit_per_kind,
+                );
 
                 let mut b = HashSet::with_capacity(peers.len());
 
@@ -113,10 +124,13 @@ impl Tracker {
                 let announce =
                     btpeer::http::query::Announce::new(url.as_str(), &info_hash.0, announce_port)?;
 
-                let peers = btpeer::http::announce_i2p(&announce, *timeout, Some(proxy))
-                    .await?
-                    .peers
-                    .0;
+                let peers = take_random_peers(
+                    btpeer::http::announce_i2p(&announce, *timeout, Some(proxy))
+                        .await?
+                        .peers
+                        .0,
+                    limit_per_kind,
+                );
 
                 let mut b = HashSet::with_capacity(peers.len());
 
@@ -180,6 +194,7 @@ impl Tracker {
 pub struct Buffer(Vec<Tracker>);
 
 impl Buffer {
+    /// Construct new buffer
     pub fn new(
         trackers: Vec<Url>,
         timeout: u64,
@@ -219,17 +234,19 @@ impl Buffer {
         &self,
         info_hash: &Id20,
         announce_port: u16,
-        initial_peers: Option<&Vec<SocketAddr>>,
+        limit: Option<usize>,
+        force_extend_with_peers: Option<&Vec<SocketAddr>>,
     ) -> Result<HashSet<SocketAddr>> {
         let mut peers = HashSet::new();
-        for t in self
+        for tracker in self
             .0
             .iter()
             .filter(|t| matches!(t, Tracker::Default { .. }))
         {
-            peers.extend(t.peers(info_hash, announce_port).await?);
+            peers.extend(tracker.peers(info_hash, announce_port, limit).await?)
         }
-        if let Some(p) = initial_peers {
+        if let Some(p) = force_extend_with_peers {
+            debug!("[tracker] forcefully extend with {} peers ({p:?})", p.len());
             peers.extend(p);
         }
         Ok(peers)
@@ -241,13 +258,15 @@ impl Buffer {
         &self,
         info_hash: &Id20,
         announce_port: u16,
-        initial_peers: Option<&Vec<SocketAddr>>,
+        limit: Option<usize>,
+        force_extend_with_peers: Option<&Vec<SocketAddr>>,
     ) -> Result<HashSet<SocketAddr>> {
         let mut peers = HashSet::new();
-        for t in self.0.iter().filter(|t| matches!(t, Tracker::I2p { .. })) {
-            peers.extend(t.peers(info_hash, announce_port).await?);
+        for tracker in self.0.iter().filter(|t| matches!(t, Tracker::I2p { .. })) {
+            peers.extend(tracker.peers(info_hash, announce_port, limit).await?)
         }
-        if let Some(p) = initial_peers {
+        if let Some(p) = force_extend_with_peers {
+            debug!("[tracker] forcefully extend with {} peers ({p:?})", p.len());
             peers.extend(p);
         }
         Ok(peers)
@@ -256,4 +275,28 @@ impl Buffer {
 
 fn is_i2p(url: &Url) -> bool {
     url.host_str().unwrap().ends_with(".i2p")
+}
+
+fn take_random_peers(mut peers: Vec<Peer>, limit: Option<usize>) -> Vec<Peer> {
+    use rand::seq::SliceRandom;
+
+    let total = peers.len();
+
+    let mut rng = rand::rng();
+    peers.shuffle(&mut rng);
+
+    match limit {
+        Some(l) => {
+            let p: Vec<Peer> = peers.into_iter().take(l).collect();
+            debug!(
+                "[tracker] take {}/{total} random peers as limited to {l}",
+                p.len()
+            );
+            p
+        }
+        None => {
+            debug!("[tracker] take all {total} peers");
+            peers
+        }
+    }
 }

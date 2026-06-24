@@ -12,13 +12,14 @@ repository = "https://github.com/YGGverse/btracker"
 
 [dependencies]
 anyhow = "1.0.102"
-btpeer = "0.11.0"
+btpeer = "0.11.1"
 btracker-fs = { version = "0.5.0", features = ["crawler"] }
 chrono = "0.4.44"
 clap = { version = "4.6.1", features = ["derive"] }
 cyphernet = { version = "0.5.4", features = ["i2p"] }
 librqbit = { version = "9.0.0-rc.0", features = ["disable-upload"]}
 log = "0.4.30"
+rand = "0.10.1"
 regex = "1.12.3"
 tokio = { version = "1.52.3", features = ["full"] }
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
