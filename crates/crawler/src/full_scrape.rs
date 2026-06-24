@@ -26,8 +26,13 @@ impl FullScrape {
                 if proxy_i2p.is_none() {
                     bail!("I2P proxy is required for tracker `{tracker}`")
                 }
+                info!(
+                    "[full-scrape] init full-scrape source `{tracker}` using proxy {}",
+                    proxy_i2p.as_ref().unwrap()
+                );
                 proxy_i2p
             } else {
+                info!("[full-scrape] init full-scrape source `{tracker}` using {proxy:?} proxy ");
                 proxy
             },
             query: Scrape::new(tracker.as_str(), None)?,
@@ -47,7 +52,7 @@ impl Buffer {
     ) -> Result<Self> {
         let mut b = Vec::with_capacity(trackers.len());
         for url in trackers {
-            debug!("index full scrape source `{url}`...");
+            debug!("[full-scrape] index full-scrape source `{url}`...");
             b.push(FullScrape::new(
                 url,
                 timeout,
@@ -67,7 +72,7 @@ impl Buffer {
                     Ok(result) => result,
                     Err(e) => {
                         warn!(
-                            "the full scrape `{}` update failed: `{e}`; skip.",
+                            "[full-scrape] the full-scrape `{}` update failed: `{e}`; skip.",
                             &this.query
                         );
                         continue; // skip without panic}
@@ -82,7 +87,10 @@ impl Buffer {
             }
         }
 
-        debug!("collected `{}` unique hashes to crawl...", b.len());
+        debug!(
+            "[full-scrape] collected {} unique hashes to crawl...",
+            b.len()
+        );
 
         Ok(b)
     }

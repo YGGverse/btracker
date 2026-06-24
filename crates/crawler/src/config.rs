@@ -57,6 +57,10 @@ pub struct Config {
     #[arg(long)]
     pub tracker_announce_proxy_i2p: Option<Url>,
 
+    /// Bind I2P / SAM bridge on given address (default: `http://127.0.0.1:0`)
+    #[arg(long)]
+    pub tracker_announce_loopback_i2p: Option<SocketAddr>,
+
     /// Define initial peer(s) to preload the `.torrent` files info
     #[arg(long)]
     pub initial_peer: Option<Vec<SocketAddr>>,

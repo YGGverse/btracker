@@ -1,12 +1,12 @@
 use anyhow::{Result, bail};
 use btpeer::Peer;
 use librqbit::dht::Id20;
+use log::*;
 use std::{collections::HashSet, net::SocketAddr, time::Duration};
 use url::Url;
 
 struct Tracker {
-    // parse once
-    is_i2p: bool,
+    i2p_loopback: Option<SocketAddr>,
     proxy: Option<String>,
     timeout: Duration,
     url: Url,
@@ -18,19 +18,27 @@ impl Tracker {
         timeout: u64,
         proxy: Option<String>,
         proxy_i2p: Option<String>,
+        i2p_loopback: Option<SocketAddr>,
     ) -> Result<Self> {
         if !url.scheme().starts_with("http") {
             bail!("HTTP trackers only!")
         }
-        let is_i2p = url.host_str().unwrap().ends_with(".i2p");
         Ok(Self {
-            is_i2p,
-            proxy: if is_i2p {
+            i2p_loopback,
+            proxy: if url.host_str().unwrap().ends_with(".i2p") {
                 if proxy_i2p.is_none() {
                     bail!("I2P proxy is required for tracker `{url}`")
                 }
+                if i2p_loopback.is_none() {
+                    bail!("I2P loopback is required for tracker `{url}`")
+                }
+                info!(
+                    "[tracker] init I2P tracker `{url}` using proxy {}",
+                    proxy_i2p.as_ref().unwrap()
+                );
                 proxy_i2p
             } else {
+                info!("[tracker] init tracker `{url}` using {proxy:?} proxy ");
                 proxy
             },
             timeout: Duration::from_secs(timeout),
@@ -45,7 +53,7 @@ impl Tracker {
 
         let mut peers = HashSet::new();
 
-        for p in if self.is_i2p {
+        for p in if self.i2p_loopback.is_some() {
             btpeer::http::announce_i2p(&announce, self.timeout, self.proxy.as_deref())
                 .await?
                 .peers
@@ -58,28 +66,65 @@ impl Tracker {
         } {
             match p {
                 Peer::Default(peer) => {
-                    peers.insert(SocketAddr::new(peer.host, peer.port));
+                    let p = SocketAddr::new(peer.host, peer.port);
+                    if peers.insert(p) {
+                        debug!("[tracker] add peer: `{p}`")
+                    } else {
+                        debug!("[tracker] replace existing peer: `{p}`")
+                    }
                 }
                 Peer::I2p(peer) => {
+                    // Create SAM bridge / local proxy as librqbit yet not supported I2P connections
+                    use std::net::{IpAddr, Ipv4Addr, SocketAddr};
                     use yosemite::{Session, style::Stream};
 
-                    let loopback =
-                        std::net::SocketAddrV4::new(std::net::Ipv4Addr::new(127, 0, 0, 1), 0);
+                    let loopback = match self.i2p_loopback {
+                        Some(l) => l,
+                        None => {
+                            let l = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), 0);
+                            warn!(
+                                "[tracker] returned I2P peer `{peer}` but I2P loopback address is not set; use defaults"
+                            );
+                            l
+                        }
+                    };
+                    debug!("[tracker] init I2P loopback on `{loopback}`");
 
                     let listener = tokio::net::TcpListener::bind(loopback).await?;
-                    let proxy_address = listener.local_addr()?;
+                    let p = listener.local_addr()?;
+
+                    if peers.insert(p) {
+                        debug!("[tracker] add I2P peer: `{peer}` with SAM on `{p}`")
+                    } else {
+                        debug!("[tracker] replace I2P existing peer: `{peer}` with SAM on `{p}`")
+                    }
+
                     let mut session = Session::<Stream>::new(Default::default()).await?;
 
                     tokio::spawn(async move {
                         while let Ok((mut local, _)) = listener.accept().await {
+                            debug!(
+                                "[tracker] accepting SAM connection from {:?} ({})",
+                                local.peer_addr(),
+                                &peer.b32
+                            );
                             if let Ok(mut remote) = session.connect(&peer.b32).await {
-                                let _ =
-                                    tokio::io::copy_bidirectional(&mut local, &mut remote).await;
+                                debug!(
+                                    "[tracker] begin SAM connection to `{}` ({})",
+                                    remote.remote_destination(),
+                                    &peer.b32
+                                );
+                                match tokio::io::copy_bidirectional(&mut local, &mut remote).await {
+                                    Ok((a, b)) => trace!(
+                                        "[tracker] copied {a}/{b} to `{}` ({})",
+                                        remote.remote_destination(),
+                                        &peer.b32
+                                    ),
+                                    Err(e) => warn!("{e}"),
+                                }
                             }
                         }
                     });
-
-                    peers.insert(proxy_address);
                 }
             }
         }
@@ -95,6 +140,7 @@ impl Buffer {
         timeout: u64,
         proxy: Option<&Url>,
         proxy_i2p: Option<&Url>,
+        loopback_i2p: Option<&SocketAddr>,
     ) -> Result<Self> {
         let mut b = Vec::with_capacity(trackers.len());
         for url in trackers {
@@ -103,6 +149,7 @@ impl Buffer {
                 timeout,
                 proxy.as_ref().map(|p| p.to_string()),
                 proxy_i2p.as_ref().map(|p| p.to_string()),
+                loopback_i2p.copied(),
             )?)
         }
         Ok(Self(b))

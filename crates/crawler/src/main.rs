@@ -54,6 +54,7 @@ async fn main() -> Result<()> {
         config.tracker_announce_timeout,
         config.tracker_announce_proxy.as_ref(),
         config.tracker_announce_proxy_i2p.as_ref(),
+        config.tracker_announce_loopback_i2p.as_ref(),
     )?;
 
     let mut ban = HashSet::with_capacity(config.index_capacity);
