@@ -145,32 +145,14 @@ async fn main() -> Result<()> {
                 )
                 .await
             {
-                Ok(peers) => {
-                    if peers.is_empty() {
-                        debug!("could not find any default peers for torrent `{h}`.");
-                        None
-                    } else {
-                        let l = peers.len();
-                        debug!("found {l} default peers for torrent `{h}`.");
-                        let p = match config.peer_limit {
-                            Some(limit) => {
-                                let p: HashSet<SocketAddr> =
-                                    peers.into_iter().take(limit).collect();
-                                debug!("take {}/{l} default peers as limited to {limit}", p.len());
-                                p
-                            }
-                            None => peers,
-                        };
-                        if let Some(t) = config.timeout_increment {
-                            timeout += t + p.len() as u64;
-                            debug!(
-                                "increase session timeout from {} to {timeout} seconds.",
-                                config.timeout
-                            )
-                        }
-                        Some(p)
-                    }
-                }
+                Ok(peers) => handle_peers(
+                    "default",
+                    &h,
+                    peers,
+                    config.peer_limit,
+                    config.timeout_increment,
+                    &mut timeout,
+                ),
                 Err(e) => {
                     warn!("could not get default peers for torrent `{h}`: {e}.");
                     None
@@ -187,34 +169,17 @@ async fn main() -> Result<()> {
                     )
                     .await
                 {
-                    Ok(peers) => {
-                        if peers.is_empty() {
-                            debug!(
-                                "could not find any fallback / I2P peer for torrent `{h}`, skip."
-                            );
-                            continue;
-                        } else {
-                            let l = peers.len();
-                            debug!("found {l} I2P peers for torrent `{h}`.");
-                            let p = match config.peer_limit_i2p {
-                                Some(limit) => {
-                                    let p: HashSet<SocketAddr> =
-                                        peers.into_iter().take(limit).collect();
-                                    debug!("take {}/{l} I2P peers as limited to {limit}", p.len());
-                                    p
-                                }
-                                None => peers,
-                            };
-                            if let Some(t) = config.timeout_increment_i2p {
-                                timeout += t + p.len() as u64;
-                                debug!(
-                                    "increase session timeout from {} to {timeout} seconds.",
-                                    config.timeout
-                                )
-                            }
-                            p
-                        }
-                    }
+                    Ok(peers) => match handle_peers(
+                        "I2P",
+                        &h,
+                        peers,
+                        config.peer_limit_i2p,
+                        config.timeout_increment_i2p,
+                        &mut timeout,
+                    ) {
+                        Some(peers) => peers,
+                        None => continue,
+                    },
                     Err(e) => {
                         warn!(
                             "could not get any fallback / I2P peer for torrent `{h}`: {e}, skip."
@@ -346,5 +311,36 @@ async fn main() -> Result<()> {
             config.sleep
         );
         std::thread::sleep(Duration::from_secs(config.sleep))
+    }
+}
+
+/// Shared peers list builder function
+fn handle_peers(
+    subject: &str,
+    info_hash: &str,
+    peers: HashSet<SocketAddr>,
+    peer_limit: Option<usize>,
+    timeout_increment: Option<u64>,
+    timeout: &mut u64,
+) -> Option<HashSet<SocketAddr>> {
+    if peers.is_empty() {
+        debug!("could not find any {subject} peers for torrent `{info_hash}`.");
+        None
+    } else {
+        let l = peers.len();
+        debug!("found {l} {subject} peers for torrent `{info_hash}`.");
+        let p = match peer_limit {
+            Some(limit) => {
+                let p: HashSet<SocketAddr> = peers.into_iter().take(limit).collect();
+                debug!("take {}/{l} {subject} peers as limited to {limit}", p.len());
+                p
+            }
+            None => peers,
+        };
+        if let Some(t) = timeout_increment {
+            *timeout += t * p.len() as u64;
+            debug!("increase torrent session timeout from to {timeout} seconds.")
+        }
+        Some(p)
     }
 }
