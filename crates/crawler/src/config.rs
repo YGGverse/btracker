@@ -65,6 +65,13 @@ pub struct Config {
     #[arg(long)]
     pub initial_peer: Option<Vec<SocketAddr>>,
 
+    /// Max peers per torrent
+    #[arg(long)]
+    pub peer_limit: Option<usize>,
+
+    /// Max I2P peers per torrent
+    pub peer_limit_i2p: Option<usize>,
+
     /// Appends `--tracker` value to magnets and torrents
     #[arg(long, default_value_t = false)]
     pub export_trackers: bool,

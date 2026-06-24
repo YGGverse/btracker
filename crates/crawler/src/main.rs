@@ -12,7 +12,7 @@ use librqbit::{
     Session, SessionOptions, limits::LimitsConfig,
 };
 use log::*;
-use std::{collections::HashSet, num::NonZero, time::Duration};
+use std::{collections::HashSet, net::SocketAddr, num::NonZero, time::Duration};
 use tokio::time;
 
 #[tokio::main]
@@ -150,15 +150,25 @@ async fn main() -> Result<()> {
                         debug!("could not find any default peers for torrent `{h}`.");
                         None
                     } else {
-                        debug!("found {} default peers for torrent `{h}`.", peers.len());
+                        let l = peers.len();
+                        debug!("found {l} default peers for torrent `{h}`.");
+                        let p = match config.peer_limit {
+                            Some(limit) => {
+                                let p: HashSet<SocketAddr> =
+                                    peers.into_iter().take(limit).collect();
+                                debug!("take {}/{l} default peers as limited to {limit}", p.len());
+                                p
+                            }
+                            None => peers,
+                        };
                         if let Some(t) = config.timeout_increment {
-                            timeout += t + peers.len() as u64;
+                            timeout += t + p.len() as u64;
                             debug!(
-                                "increase session timeout from {} to {timeout} seconds for.",
+                                "increase session timeout from {} to {timeout} seconds.",
                                 config.timeout
                             )
                         }
-                        Some(peers)
+                        Some(p)
                     }
                 }
                 Err(e) => {
@@ -184,15 +194,25 @@ async fn main() -> Result<()> {
                             );
                             continue;
                         } else {
-                            debug!("found {} I2P peers for torrent `{h}`.", peers.len());
+                            let l = peers.len();
+                            debug!("found {l} I2P peers for torrent `{h}`.");
+                            let p = match config.peer_limit_i2p {
+                                Some(limit) => {
+                                    let p: HashSet<SocketAddr> =
+                                        peers.into_iter().take(limit).collect();
+                                    debug!("take {}/{l} I2P peers as limited to {limit}", p.len());
+                                    p
+                                }
+                                None => peers,
+                            };
                             if let Some(t) = config.timeout_increment_i2p {
-                                timeout += t + peers.len() as u64;
+                                timeout += t + p.len() as u64;
                                 debug!(
                                     "increase session timeout from {} to {timeout} seconds.",
                                     config.timeout
                                 )
                             }
-                            peers
+                            p
                         }
                     }
                     Err(e) => {
