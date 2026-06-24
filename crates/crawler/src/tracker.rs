@@ -154,9 +154,9 @@ impl Tracker {
                             let mut session = Session::<Stream>::new(Default::default()).await?;
 
                             tokio::spawn(async move {
-                                while let Ok((mut local, _)) = listener.accept().await {
+                                while let Ok((mut local, client)) = listener.accept().await {
                                     debug!(
-                                        "[tracker] accepting SAM connection from {:?} ({})",
+                                        "[tracker] accepting SAM connection from {client} to {:?} ({})",
                                         local.peer_addr(),
                                         &peer.b32
                                     );
