@@ -12,17 +12,21 @@ use yosemite::{Session, style::Stream};
 
 pub enum Tracker {
     Default {
+        peers_limit: Option<usize>,
+        port: u16,
         proxy: Option<String>,
         timeout: Duration,
         url: Url,
     },
     I2p {
+        inbound_len: usize,
         loopback: IpAddr,
+        outbound_len: usize,
+        peers_limit: Option<usize>,
+        port: u16,
         proxy: Option<String>,
         timeout: Duration,
         url: Url,
-        inbound_len: usize,
-        outbound_len: usize,
     },
 }
 
@@ -30,26 +34,25 @@ impl Tracker {
     async fn peers(
         &self,
         info_hash: &Id20,
-        announce_port: u16,
-        peers_limit_per_tracker: Option<usize>,
-        peers_limit_per_tracker_i2p: Option<usize>,
         peers_b32: &mut HashSet<String>,
     ) -> Result<HashSet<SocketAddr>> {
         Ok(match self {
             Self::Default {
+                peers_limit,
+                port,
                 proxy,
                 timeout,
                 url,
             } => {
                 let announce =
-                    btpeer::http::query::Announce::new(url.as_str(), &info_hash.0, announce_port)?;
+                    btpeer::http::query::Announce::new(url.as_str(), &info_hash.0, *port)?;
 
                 let peers = take_random_peers(
                     btpeer::http::announce(&announce, *timeout, proxy.as_deref())
                         .await?
                         .peers
                         .0,
-                    peers_limit_per_tracker,
+                    *peers_limit,
                 );
 
                 let mut b = HashSet::with_capacity(peers.len());
@@ -66,21 +69,23 @@ impl Tracker {
             }
             Self::I2p {
                 inbound_len,
-                outbound_len,
                 loopback,
+                outbound_len,
+                peers_limit,
+                port,
                 proxy,
                 timeout,
                 url,
             } => {
                 let announce =
-                    btpeer::http::query::Announce::new(url.as_str(), &info_hash.0, announce_port)?;
+                    btpeer::http::query::Announce::new(url.as_str(), &info_hash.0, *port)?;
 
                 let peers = take_random_peers(
                     btpeer::http::announce_i2p(&announce, *timeout, proxy.as_deref())
                         .await?
                         .peers
                         .0,
-                    peers_limit_per_tracker_i2p,
+                    *peers_limit,
                 );
 
                 let mut b = HashSet::with_capacity(peers.len());
@@ -122,14 +127,7 @@ pub struct Buffer(pub Vec<Tracker>);
 
 impl Buffer {
     /// Return peers from trackers
-    pub async fn peers(
-        &self,
-        info_hash: &Id20,
-        announce_port: u16,
-        peers_limit_per_tracker: Option<usize>,
-        peers_limit_per_tracker_i2p: Option<usize>,
-        force_extend_with_peers: Option<&Vec<SocketAddr>>,
-    ) -> Result<HashSet<SocketAddr>> {
+    pub async fn peers(&self, info_hash: &Id20) -> Result<HashSet<SocketAddr>> {
         let mut peers_b32 = HashSet::new(); // make sure I2P peers collected are unique as bind on different SocketAddr
         let mut peers = HashSet::new(); // unique peers buffer collected from all trackers
 
@@ -139,22 +137,7 @@ impl Buffer {
                 info_hash.as_string(),
                 tracker.url()
             );
-            peers.extend(
-                tracker
-                    .peers(
-                        info_hash,
-                        announce_port,
-                        peers_limit_per_tracker,
-                        peers_limit_per_tracker_i2p,
-                        &mut peers_b32,
-                    )
-                    .await?,
-            )
-        }
-
-        if let Some(p) = force_extend_with_peers {
-            debug!("[tracker] forcefully extend with {} peers ({p:?})", p.len());
-            peers.extend(p);
+            peers.extend(tracker.peers(info_hash, &mut peers_b32).await?)
         }
 
         Ok(peers)

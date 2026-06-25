@@ -1,5 +1,6 @@
 mod config;
 mod full_scrape;
+mod opt;
 mod tracker;
 
 use anyhow::Result;
@@ -14,6 +15,8 @@ use librqbit::{
     limits::LimitsConfig,
 };
 use log::*;
+use opt::Opt;
+use regex::Regex;
 use std::{collections::HashSet, num::NonZero, time::Duration};
 use tokio::time;
 use tracker::Tracker;
@@ -36,86 +39,74 @@ async fn main() -> Result<()> {
     }
     // init components
     let time_init = Local::now();
-    let config = Config::parse();
+
+    let opt = Opt::parse();
+    let config: Config = toml::from_str(&std::fs::read_to_string(&opt.config).unwrap()).unwrap();
+
     let preload = Storage::init(
-        config.preload,
-        config.preload_regex,
-        config.preload_max_filecount,
-        config.preload_max_filesize,
+        config.preload.path,
+        config.preload.regex.map(|r| Regex::new(&r).unwrap()),
+        config.preload.max_filecount,
+        config.preload.max_filesize,
     )
     .unwrap();
 
     // init info-hash sources
-    let mut full_scrapes =
-        Vec::with_capacity(config.full_scrape.len() + config.full_scrape_i2p.len());
+    let mut scrape = Vec::with_capacity(config.tracker.scrape.len());
 
-    for url in config.full_scrape {
-        if !url.scheme().starts_with("http") {
+    for s in config.tracker.scrape {
+        if !s.url.scheme().starts_with("http") {
             todo!("HTTP trackers only!")
         }
-        info!("init full scrape source `{url}`");
-        full_scrapes.push(FullScrape {
-            proxy: config.full_scrape_proxy.as_ref().map(|u| u.to_string()),
-            query: Scrape::new(url.as_str(), None)?,
-            timeout: Duration::from_secs(config.full_scrape_timeout),
+        info!("init full scrape source `{}`", s.url);
+        scrape.push(FullScrape {
+            proxy: s.proxy.as_ref().map(|u| u.to_string()),
+            query: Scrape::new(s.url.as_str(), None)?,
+            timeout: Duration::from_secs(s.timeout),
         })
     }
 
-    for url in config.full_scrape_i2p {
-        if !url.scheme().starts_with("http") {
-            todo!("HTTP trackers only!")
-        }
-        info!("init I2P full scrape source `{url}`");
-        full_scrapes.push(FullScrape {
-            proxy: config.full_scrape_proxy_i2p.as_ref().map(|u| u.to_string()),
-            query: Scrape::new(url.as_str(), None)?,
-            timeout: Duration::from_secs(config.full_scrape_timeout_i2p),
-        })
-    }
-
-    let full_scrape = full_scrape::Buffer(full_scrapes);
+    let full_scrape = full_scrape::Buffer(scrape);
 
     // init trackers (for DHT data preload)
     let mut trackers =
-        Vec::with_capacity(config.tracker_announce.len() + config.tracker_announce_i2p.len());
+        Vec::with_capacity(config.tracker.announce.len() + config.tracker.announce_i2p.len());
 
-    for url in config.tracker_announce {
-        if !url.scheme().starts_with("http") {
+    for t in config.tracker.announce {
+        if !t.url.scheme().starts_with("http") {
             todo!("HTTP trackers only!")
         }
-        info!("init tracker `{url}`");
+        info!("init tracker `{}`", t.url);
         trackers.push(Tracker::Default {
-            proxy: config
-                .tracker_announce_proxy
-                .as_ref()
-                .map(|u| u.to_string()),
-            timeout: Duration::from_secs(config.tracker_announce_timeout),
-            url,
+            proxy: t.proxy.as_ref().map(|u| u.to_string()),
+            timeout: Duration::from_secs(t.timeout),
+            url: t.url,
+            port: t.port,
+            peers_limit: t.peers_limit,
         })
     }
 
-    for url in config.tracker_announce_i2p {
-        if !url.scheme().starts_with("http") {
+    for t in config.tracker.announce_i2p {
+        if !t.url.scheme().starts_with("http") {
             todo!("HTTP trackers only!")
         }
-        info!("init I2P tracker `{url}`");
+        info!("init I2P tracker `{}`", t.url);
         trackers.push(Tracker::I2p {
-            loopback: config.tracker_announce_loopback_i2p,
-            proxy: config
-                .tracker_announce_proxy_i2p
-                .as_ref()
-                .map(|u| u.to_string()),
-            timeout: Duration::from_secs(config.tracker_announce_timeout_i2p),
-            inbound_len: config.i2p_inbound_len,
-            outbound_len: config.i2p_outbound_len,
-            url,
+            loopback: t.loopback,
+            proxy: t.proxy.as_ref().map(|u| u.to_string()),
+            timeout: Duration::from_secs(t.timeout),
+            inbound_len: t.inbound_len,
+            outbound_len: t.outbound_len,
+            url: t.url,
+            port: t.port,
+            peers_limit: t.peers_limit,
         })
     }
 
     let tracker = tracker::Buffer(trackers);
 
     // init ban list to skip unresolvable info-hashes between the queue iterations
-    let mut ban = HashSet::with_capacity(config.index_capacity);
+    let mut ban = HashSet::with_capacity(config.info_hash_capacity);
 
     // start the crawler
     info!("crawler started at {time_init}");
@@ -131,7 +122,7 @@ async fn main() -> Result<()> {
         let session = Session::new_with_opts(
             preload.root().clone(),
             SessionOptions {
-                bind_device_name: config.bind.clone(),
+                bind_device_name: config.bind_device_name.clone(),
                 blocklist_url: config.blocklist.as_ref().map(|b| b.to_string()),
                 listen: None,
                 connect: Some(ConnectionOptions {
@@ -154,7 +145,7 @@ async fn main() -> Result<()> {
         )
         .await?;
         // build unique ID index from the multiple info-hash sources
-        let queue = full_scrape.get(config.index_capacity).await?;
+        let queue = full_scrape.get(config.info_hash_capacity).await?;
         // clean up nonexistent ban entries from the memory pool
         ban.retain(|i| {
             let is_retain = queue.contains(i);
@@ -186,33 +177,19 @@ async fn main() -> Result<()> {
             }
             info!("resolve `{h}`...");
 
-            // init default timeout, but we can increase it later, by appending slow I2P / fallback peers
-            let mut timeout = config.timeout;
-
             // discover unique peers first
-            let initial_peers = match tracker
-                .peers(
-                    &i,
-                    config.tracker_announce_port,
-                    config.tracker_announce_peer_limit,
-                    config.tracker_announce_peer_limit_i2p,
-                    config.initial_peer.as_ref(),
-                )
-                .await
-            {
-                Ok(peers) => {
+            let initial_peers = match tracker.peers(&i).await {
+                Ok(mut peers) => {
+                    if let Some(ref p) = config.initial_peers {
+                        debug!("forcefully extend with {} peers ({p:?})", p.len());
+                        peers.extend(p);
+                    }
                     if peers.is_empty() {
                         debug!("could not find peers for torrent `{h}`, skip.");
                         continue;
                     } else {
                         let l = peers.len();
                         debug!("collected {l} peers for torrent `{h}`.");
-                        if let Some(t) = config.timeout_increment {
-                            timeout += t * l as u64;
-                            debug!(
-                                "increase torrent session timeout to {timeout} ({t}*{l}) seconds."
-                            )
-                        }
                         peers
                     }
                 }
@@ -228,7 +205,7 @@ async fn main() -> Result<()> {
             // run the crawler in single thread for performance reasons,
             // use `timeout` argument option to skip the dead connections.
             match time::timeout(
-                Duration::from_secs(timeout),
+                Duration::from_secs(config.timeout_seconds),
                 session.add_torrent(
                     AddTorrent::from_url(tracker.magnet(&h)),
                     Some(AddTorrentOptions {
@@ -257,10 +234,10 @@ async fn main() -> Result<()> {
                         assert!(preload.regex.is_some());
                         assert!(mt.is_paused());
                         let mut keep_files = HashSet::with_capacity(
-                            config.preload_max_filecount.unwrap_or_default(),
+                            config.preload.max_filecount.unwrap_or_default(),
                         );
                         let mut only_files = HashSet::with_capacity(
-                            config.preload_max_filecount.unwrap_or_default(),
+                            config.preload.max_filecount.unwrap_or_default(),
                         );
                         mt.wait_until_initialized().await?;
                         let bytes = mt.with_metadata(|m| {
@@ -341,8 +318,8 @@ async fn main() -> Result<()> {
                 .signed_duration_since(time_init)
                 .as_seconds_f32(),
             ban.len(),
-            config.sleep
+            config.sleep_seconds
         );
-        std::thread::sleep(Duration::from_secs(config.sleep))
+        std::thread::sleep(Duration::from_secs(config.sleep_seconds))
     }
 }
