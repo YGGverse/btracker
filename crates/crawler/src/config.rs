@@ -1,10 +1,12 @@
 mod preload;
+mod timeout;
 mod tracker;
 
 use preload::Preload;
 use serde::Deserialize;
 use serde_inline_default::serde_inline_default;
 use std::net::SocketAddr;
+use timeout::Timeout;
 use tracker::Tracker;
 use url::Url;
 
@@ -44,9 +46,5 @@ pub struct Config {
     /// * e.g. `file:///path/to/blocklist.txt` for local file
     pub blocklist_url: Option<Url>,
 
-    #[serde_inline_default(60)]
-    pub timeout_add_torrent_seconds: u64,
-
-    #[serde_inline_default(60)]
-    pub timeout_torrent_preload_seconds: u64,
+    pub timeout: Timeout,
 }
