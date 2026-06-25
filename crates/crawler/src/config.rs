@@ -16,6 +16,9 @@ pub struct Config {
     pub preload: PathBuf,
 
     /// Absolute path(s) or URL(s) to the BEP 48 / Full Scrape
+    ///
+    /// * supports HTTP trackers only
+    /// * supports I2P trackers but make sure you provided related `*_i2p` and `i2p_*` options
     #[arg(long, short)]
     pub full_scrape: Vec<Url>,
 
@@ -30,6 +33,8 @@ pub struct Config {
     pub full_scrape_proxy: Option<Url>,
 
     /// Use HTTP(s) proxy to resolve `full_scrape` I2P trackers, would be `http://127.0.0.1:4444`
+    ///
+    /// * only if the I2P `full_scrape` trackers in use
     #[arg(long)]
     pub full_scrape_proxy_i2p: Option<Url>,
 
@@ -57,10 +62,14 @@ pub struct Config {
     pub tracker_announce_proxy: Option<Url>,
 
     /// Use HTTP(s) proxy to resolve `full_scrape` I2P trackers, would be `http://127.0.0.1:4444`
+    ///
+    /// * only if the I2P `full_scrape` trackers in use
     #[arg(long)]
     pub tracker_announce_proxy_i2p: Option<Url>,
 
     /// Bind I2P / SAM bridge on given host (default: `127.0.0.1`)
+    ///
+    /// * only if the I2P `full_scrape` trackers in use
     #[arg(long)]
     pub tracker_announce_loopback_i2p: Option<IpAddr>,
 
@@ -73,6 +82,8 @@ pub struct Config {
     pub peer_limit: Option<usize>,
 
     /// Max I2P peers per torrent
+    ///
+    /// * only if the I2P `full_scrape` trackers in use
     pub peer_limit_i2p: Option<usize>,
 
     /// Appends `--tracker` value to magnets and torrents
@@ -143,14 +154,20 @@ pub struct Config {
     /// consider increasing the `timeout` value by using `timeout_increment_i2p`.
     ///
     /// Formula: `new timeout = peers found * value in seconds`.
+    ///
+    /// * only if the I2P `full_scrape` trackers in use
     #[arg(long)]
     pub timeout_increment_i2p: Option<u64>,
 
     /// How many hops do the inbound tunnels of the session have.
+    ///
+    /// * only if the I2P `full_scrape` trackers in use
     #[arg(long, default_value_t = 3)]
     pub i2p_inbound_len: usize,
 
     /// How many hops do the outbound tunnels of the session have.
+    ///
+    /// * only if the I2P `full_scrape` trackers in use
     #[arg(long, default_value_t = 3)]
     pub i2p_outbound_len: usize,
 }
