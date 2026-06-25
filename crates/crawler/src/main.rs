@@ -141,7 +141,7 @@ async fn main() -> Result<()> {
             {
                 Ok(peers) => {
                     if peers.is_empty() {
-                        debug!("could not find any default peers for torrent `{h}`.");
+                        debug!("could not find default peers for torrent `{h}`.");
                         None
                     } else {
                         let l = peers.len();
@@ -149,7 +149,7 @@ async fn main() -> Result<()> {
                         if let Some(t) = config.timeout_increment {
                             timeout += t * l as u64;
                             debug!(
-                                "increase torrent session timeout from to {timeout} ({t}*{l}) seconds."
+                                "increase torrent session timeout to {timeout} ({t}*{l}) seconds."
                             )
                         }
                         Some(peers)
@@ -180,7 +180,7 @@ async fn main() -> Result<()> {
                     Ok(peers) => {
                         if peers.is_empty() {
                             debug!(
-                                "could not find any I2P peers for torrent `{h}`, nowhere to resolve, skip."
+                                "could not find I2P peers for torrent `{h}`, nowhere to resolve, skip."
                             );
                             continue;
                         } else {
@@ -189,16 +189,14 @@ async fn main() -> Result<()> {
                             if let Some(t) = config.timeout_increment_i2p {
                                 timeout += t * l as u64;
                                 debug!(
-                                    "increase torrent session timeout from to {timeout} ({t}*{l}) seconds."
+                                    "increase torrent session timeout to {timeout} ({t}*{l}) seconds."
                                 )
                             }
                             peers
                         }
                     }
                     Err(e) => {
-                        warn!(
-                            "could not get any fallback / I2P peer for torrent `{h}`: {e}, skip."
-                        );
+                        warn!("could not get fallback / I2P peer for torrent `{h}`: {e}, skip.");
                         continue;
                     }
                 },
