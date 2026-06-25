@@ -54,7 +54,11 @@ impl Tracker {
                         .0
                         .into_iter()
                         .filter(|p| match p {
-                            Peer::Default(this) => this.port != *port,
+                            Peer::Default(this) => {
+                                url.host_str()
+                                    .is_some_and(|h| !h.contains(&this.host.to_string()))
+                                    && this.port != *port
+                            }
                             Peer::I2p(..) => false,
                         })
                         .collect(), // @TODO same for I2P
