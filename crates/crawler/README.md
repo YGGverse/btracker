@@ -6,5 +6,6 @@
 SSD-friendly FS crawler of BEP 48 / Full Scrape, based on [librqbit](https://github.com/ikatson/rqbit/tree/main/crates/librqbit)
 
 > [!NOTE]
+> * See also: [config.toml](https://codeberg.org/YGGverse/server/src/branch/main/etc/btracker/crawler.toml) example
 > * By using OpenTracker as the index source, please make sure `FEATURES+=-DWANT_FULLSCRAPE` is enabled!
 > * I2P option in development, do not use it on production!
