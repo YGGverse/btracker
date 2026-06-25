@@ -21,7 +21,7 @@ pub struct I2p {
     pub port: u16,
 
     /// Use HTTP(s) proxy, e.g. `http://127.0.0.1:9050` or `http://127.0.0.1:4444` for I2P
-    pub proxy: Option<Url>,
+    pub proxy_url: Option<Url>,
 
     /// Bind I2P / SAM bridge on given host
     ///

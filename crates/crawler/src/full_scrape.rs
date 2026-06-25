@@ -3,9 +3,10 @@ use btpeer::{InfoHash, http::query::Scrape};
 use librqbit::dht::Id20;
 use log::*;
 use std::{collections::HashSet, time::Duration};
+use url::Url;
 
 pub struct FullScrape {
-    pub proxy: Option<String>,
+    pub proxy: Option<Url>,
     pub query: Scrape,
     pub timeout: Duration,
 }
@@ -17,19 +18,24 @@ impl Buffer {
         let mut b = HashSet::with_capacity(expected_capacity);
 
         for this in self.0.iter() {
-            for i in
-                match btpeer::http::scrape(&this.query, this.timeout, this.proxy.as_deref()).await {
-                    Ok(result) => result,
-                    Err(e) => {
-                        warn!(
-                            "[full-scrape] full-scrape `{}` update failed: `{e}`; skip",
-                            &this.query
-                        );
-                        continue; // skip without panic
-                    }
+            for i in match btpeer::http::scrape(
+                &this.query,
+                this.timeout,
+                this.proxy.as_ref().map(|u| u.as_str()),
+            )
+            .await
+            {
+                Ok(result) => result,
+                Err(e) => {
+                    warn!(
+                        "[full-scrape] full-scrape `{}` update failed: `{e}`; skip",
+                        &this.query
+                    );
+                    continue; // skip without panic
                 }
-                .stats
-                .into_keys()
+            }
+            .stats
+            .into_keys()
             {
                 b.insert(match i {
                     InfoHash::V1(ref b) => Id20::from_bytes(b)?,

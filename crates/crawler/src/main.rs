@@ -60,7 +60,7 @@ async fn main() -> Result<()> {
         }
         info!("init full scrape source `{}`", s.url);
         scrape.push(FullScrape {
-            proxy: s.proxy.as_ref().map(|u| u.to_string()),
+            proxy: s.proxy_url,
             query: Scrape::new(s.url.as_str(), None)?,
             timeout: Duration::from_secs(s.timeout),
         })
@@ -78,7 +78,7 @@ async fn main() -> Result<()> {
         }
         info!("init tracker `{}`", t.url);
         trackers.push(Tracker::Default {
-            proxy: t.proxy.as_ref().map(|u| u.to_string()),
+            proxy: t.proxy_url,
             timeout: Duration::from_secs(t.timeout),
             url: t.url,
             port: t.port,
@@ -93,7 +93,7 @@ async fn main() -> Result<()> {
         info!("init I2P tracker `{}`", t.url);
         trackers.push(Tracker::I2p {
             loopback: t.loopback,
-            proxy: t.proxy.as_ref().map(|u| u.to_string()),
+            proxy: t.proxy_url,
             timeout: Duration::from_secs(t.timeout),
             inbound_len: t.inbound_len,
             outbound_len: t.outbound_len,
@@ -127,7 +127,7 @@ async fn main() -> Result<()> {
                 listen: None,
                 connect: Some(ConnectionOptions {
                     enable_tcp: !config.disable_tcp,
-                    proxy_url: config.proxy.as_ref().map(|u| u.to_string()),
+                    proxy_url: config.proxy_url.as_ref().map(|u| u.to_string()),
                     ..ConnectionOptions::default()
                 }),
                 dht: None,

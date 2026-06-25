@@ -14,7 +14,7 @@ pub enum Tracker {
     Default {
         peers_limit: Option<usize>,
         port: u16,
-        proxy: Option<String>,
+        proxy: Option<Url>,
         timeout: Duration,
         url: Url,
     },
@@ -24,7 +24,7 @@ pub enum Tracker {
         outbound_len: usize,
         peers_limit: Option<usize>,
         port: u16,
-        proxy: Option<String>,
+        proxy: Option<Url>,
         timeout: Duration,
         url: Url,
     },
@@ -48,7 +48,7 @@ impl Tracker {
                     btpeer::http::query::Announce::new(url.as_str(), &info_hash.0, *port)?;
 
                 let peers = take_random_peers(
-                    btpeer::http::announce(&announce, *timeout, proxy.as_deref())
+                    btpeer::http::announce(&announce, *timeout, proxy.as_ref().map(|u| u.as_str()))
                         .await?
                         .peers
                         .0,
@@ -81,10 +81,14 @@ impl Tracker {
                     btpeer::http::query::Announce::new(url.as_str(), &info_hash.0, *port)?;
 
                 let peers = take_random_peers(
-                    btpeer::http::announce_i2p(&announce, *timeout, proxy.as_deref())
-                        .await?
-                        .peers
-                        .0,
+                    btpeer::http::announce_i2p(
+                        &announce,
+                        *timeout,
+                        proxy.as_ref().map(|u| u.as_str()),
+                    )
+                    .await?
+                    .peers
+                    .0,
                     *peers_limit,
                 );
 

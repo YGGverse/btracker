@@ -63,7 +63,7 @@ pub struct Config {
     pub initial_peers: Option<Vec<SocketAddr>>,
 
     /// Use `socks5://[username:password@]host:port` for librqbit connections
-    pub proxy: Option<Url>,
+    pub proxy_url: Option<Url>,
 
     /// The P2P Blocklist file URL (to filter outgoing connections)
     ///
