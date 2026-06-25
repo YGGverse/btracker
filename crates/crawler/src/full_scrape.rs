@@ -15,10 +15,10 @@ pub struct Buffer(pub Vec<FullScrape>);
 
 impl Buffer {
     pub async fn get(&self, expected_capacity: usize) -> Result<HashSet<Id20>> {
-        let mut b = HashSet::with_capacity(expected_capacity);
+        let mut s = HashSet::with_capacity(expected_capacity);
 
         for this in self.0.iter() {
-            for i in match btpeer::http::scrape(
+            let scrape = match btpeer::http::scrape(
                 &this.query,
                 this.timeout,
                 this.proxy.as_ref().map(|u| u.as_str()),
@@ -35,19 +35,27 @@ impl Buffer {
                 }
             }
             .stats
-            .into_keys()
-            {
-                b.insert(match i {
+            .into_keys();
+
+            let total = scrape.len();
+
+            for i in scrape {
+                s.insert(match i {
                     InfoHash::V1(ref b) => Id20::from_bytes(b)?,
                 });
             }
+
+            debug!(
+                "[full-scrape] received {total} unique hashes from `{}`...",
+                this.query.0
+            )
         }
 
         debug!(
             "[full-scrape] collected {} unique hashes to crawl...",
-            b.len()
+            s.len()
         );
 
-        Ok(b)
+        Ok(s)
     }
 }
