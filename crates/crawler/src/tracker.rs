@@ -281,7 +281,7 @@ impl Buffer {
 }
 
 fn is_i2p(url: &Url) -> bool {
-    url.host_str().unwrap().ends_with(".i2p")
+    url.host_str().is_some_and(|h| h.ends_with(".i2p"))
 }
 
 fn take_random_peers(mut peers: Vec<Peer>, limit: Option<usize>) -> Vec<Peer> {
