@@ -316,7 +316,7 @@ async fn main() -> Result<()> {
                     }
                 },
                 Err(e) => {
-                    info!(
+                    debug!(
                         "skip awaiting the completion of adding torrent `{h}` (`{e}`), ban temporarily."
                     );
                     assert!(ban.insert(i))
