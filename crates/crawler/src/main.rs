@@ -69,8 +69,15 @@ async fn main() -> Result<()> {
     let full_scrape = full_scrape::Buffer(scrape);
 
     // init trackers (for DHT data preload)
-    let mut trackers =
-        Vec::with_capacity(config.tracker.announce.len() + config.tracker.announce_i2p.len());
+    let mut trackers = Vec::with_capacity(
+        config.tracker.announce.len()
+            + config
+                .tracker
+                .announce_i2p
+                .as_ref()
+                .map(|a| a.len())
+                .unwrap_or_default(),
+    );
 
     for i in config.tracker.announce {
         if !i.url.scheme().starts_with("http") {
@@ -86,21 +93,23 @@ async fn main() -> Result<()> {
         })
     }
 
-    for i in config.tracker.announce_i2p {
-        if !i.url.scheme().starts_with("http") {
-            todo!("HTTP trackers only!")
+    if let Some(a) = config.tracker.announce_i2p {
+        for i in a {
+            if !i.url.scheme().starts_with("http") {
+                todo!("HTTP trackers only!")
+            }
+            info!("init I2P tracker `{}`", i.url);
+            trackers.push(Tracker::I2p {
+                loopback: i.loopback_host,
+                proxy: i.proxy_url,
+                timeout: Duration::from_secs(i.timeout),
+                inbound_len: i.inbound_len,
+                outbound_len: i.outbound_len,
+                url: i.url,
+                port: i.port,
+                peers_limit: i.peers_limit,
+            })
         }
-        info!("init I2P tracker `{}`", i.url);
-        trackers.push(Tracker::I2p {
-            loopback: i.loopback_host,
-            proxy: i.proxy_url,
-            timeout: Duration::from_secs(i.timeout),
-            inbound_len: i.inbound_len,
-            outbound_len: i.outbound_len,
-            url: i.url,
-            port: i.port,
-            peers_limit: i.peers_limit,
-        })
     }
 
     let tracker = tracker::Buffer(trackers);

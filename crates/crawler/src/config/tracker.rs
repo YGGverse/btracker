@@ -12,5 +12,5 @@ pub struct Tracker {
 
     /// Peers source
     pub announce: Vec<Default>,
-    pub announce_i2p: Vec<I2p>,
+    pub announce_i2p: Option<Vec<I2p>>,
 }
