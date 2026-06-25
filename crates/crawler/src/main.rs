@@ -126,7 +126,6 @@ async fn main() -> Result<()> {
                 blocklist_url: config.blocklist_url.as_ref().map(|b| b.to_string()),
                 listen: None,
                 connect: Some(ConnectionOptions {
-                    enable_tcp: !config.disable_tcp,
                     proxy_url: config.proxy_url.as_ref().map(|u| u.to_string()),
                     ..ConnectionOptions::default()
                 }),

@@ -52,10 +52,6 @@ pub struct Config {
     /// Bind librqbit session on specified device name (`tun0`, `mycelium`, etc.)
     pub bind_device_name: Option<String>,
 
-    /// Disable TCP connection
-    #[serde_inline_default(true)]
-    pub disable_tcp: bool,
-
     /// Limit download speed (b/s)
     pub download_limit: Option<u32>,
 
