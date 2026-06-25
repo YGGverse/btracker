@@ -153,4 +153,12 @@ pub struct Config {
     /// Formula: `new timeout = peers found * value in seconds`.
     #[arg(long)]
     pub timeout_increment_i2p: Option<u64>,
+
+    /// How many hops do the inbound tunnels of the session have.
+    #[arg(long, default_value_t = 3)]
+    pub i2p_inbound_len: usize,
+
+    /// How many hops do the outbound tunnels of the session have.
+    #[arg(long, default_value_t = 3)]
+    pub i2p_outbound_len: usize,
 }

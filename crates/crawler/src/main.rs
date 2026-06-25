@@ -174,6 +174,11 @@ async fn main() -> Result<()> {
                     .peers_i2p(
                         &i,
                         config.tracker_announce_port,
+                        Some(yosemite::SessionOptions {
+                            inbound_len: config.i2p_inbound_len,
+                            outbound_len: config.i2p_outbound_len,
+                            ..yosemite::SessionOptions::default()
+                        }),
                         config.peer_limit_i2p,
                         config.initial_peer.as_ref(),
                     )

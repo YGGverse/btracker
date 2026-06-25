@@ -8,7 +8,7 @@ use std::{
     time::Duration,
 };
 use url::Url;
-use yosemite::{Session, style::Stream};
+use yosemite::{Session, SessionOptions, style::Stream};
 
 enum Tracker {
     Default {
@@ -26,7 +26,7 @@ enum Tracker {
 
 impl Tracker {
     /// Construct default Tracker
-    pub fn default(url: Url, timeout: u64, proxy: Option<String>) -> Result<Self> {
+    fn default(url: Url, timeout: u64, proxy: Option<String>) -> Result<Self> {
         if !url.scheme().starts_with("http") {
             bail!("HTTP trackers only!")
         }
@@ -42,7 +42,7 @@ impl Tracker {
     }
 
     /// Construct I2P tracker
-    pub fn i2p(url: Url, timeout: u64, proxy: String, loopback: Option<IpAddr>) -> Result<Self> {
+    fn i2p(url: Url, timeout: u64, proxy: String, loopback: Option<IpAddr>) -> Result<Self> {
         if !url.scheme().starts_with("http") {
             bail!("HTTP trackers only!")
         }
@@ -69,11 +69,12 @@ impl Tracker {
     }
 
     /// Get peers by `info_hash` from Trackers
-    pub async fn peers(
+    async fn peers(
         &self,
         info_hash: &Id20,
         announce_port: u16,
         limit_per_kind: Option<usize>,
+        i2p_session_options: Option<SessionOptions>,
     ) -> Result<HashSet<SocketAddr>> {
         Ok(match self {
             Self::Default {
@@ -154,7 +155,10 @@ impl Tracker {
                                 )
                             }
 
-                            let mut session = Session::<Stream>::new(Default::default()).await?;
+                            let mut session = Session::<Stream>::new(
+                                i2p_session_options.clone().unwrap_or_default(),
+                            )
+                            .await?;
 
                             debug!(
                                 "[tracker] listening incoming connections for `{peer}` on `{p}`..."
@@ -230,11 +234,6 @@ impl Buffer {
         Ok(Self(b))
     }
 
-    /// Build magnet URI (`librqbit` impl dependency)
-    pub fn magnet(&self, info_hash: &str) -> String {
-        format!("magnet:?xt=urn:btih:{info_hash}")
-    }
-
     /// Return resolved peers from default trackers
     /// * optionally extend with `initial_peers`
     pub async fn peers(
@@ -250,7 +249,7 @@ impl Buffer {
             .iter()
             .filter(|t| matches!(t, Tracker::Default { .. }))
         {
-            peers.extend(tracker.peers(info_hash, announce_port, limit).await?)
+            peers.extend(tracker.peers(info_hash, announce_port, limit, None).await?)
         }
         if let Some(p) = force_extend_with_peers {
             debug!("[tracker] forcefully extend with {} peers ({p:?})", p.len());
@@ -265,18 +264,28 @@ impl Buffer {
         &self,
         info_hash: &Id20,
         announce_port: u16,
+        options: Option<SessionOptions>,
         limit: Option<usize>,
         force_extend_with_peers: Option<&Vec<SocketAddr>>,
     ) -> Result<HashSet<SocketAddr>> {
         let mut peers = HashSet::new();
         for tracker in self.0.iter().filter(|t| matches!(t, Tracker::I2p { .. })) {
-            peers.extend(tracker.peers(info_hash, announce_port, limit).await?)
+            peers.extend(
+                tracker
+                    .peers(info_hash, announce_port, limit, options.clone())
+                    .await?,
+            )
         }
         if let Some(p) = force_extend_with_peers {
             debug!("[tracker] forcefully extend with {} peers ({p:?})", p.len());
             peers.extend(p);
         }
         Ok(peers)
+    }
+
+    /// Build magnet URI (`librqbit` impl dependency)
+    pub fn magnet(&self, info_hash: &str) -> String {
+        format!("magnet:?xt=urn:btih:{info_hash}")
     }
 }
 
