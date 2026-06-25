@@ -1,7 +1,7 @@
 use clap::Parser;
 use regex::Regex;
 use std::{
-    net::{IpAddr, SocketAddr},
+    net::{IpAddr, Ipv4Addr, SocketAddr},
     path::PathBuf,
 };
 use url::Url;
@@ -18,9 +18,14 @@ pub struct Config {
     /// Absolute path(s) or URL(s) to the BEP 48 / Full Scrape
     ///
     /// * supports HTTP trackers only
-    /// * supports I2P trackers but make sure you provided related `*_i2p` and `i2p_*` options
     #[arg(long, short)]
     pub full_scrape: Vec<Url>,
+
+    /// Absolute path(s) or URL(s) to the BEP 48 / Full Scrape I2P trackers
+    ///
+    /// * supports HTTP trackers only
+    #[arg(long, short)]
+    pub full_scrape_i2p: Vec<Url>,
 
     /// How long to wait for tracker full scrape response
     /// * tip: by using OpenTracker,
@@ -48,10 +53,17 @@ pub struct Config {
     #[arg(long, short)]
     pub tracker_announce: Vec<Url>,
 
-    /// Announce timeout for every info-hash handle
-    /// * increase by using I2P trackers, but keep in mind about global `timeout`
-    #[arg(long, default_value_t = 15)]
+    /// Define HTTP / I2P tracker(s) to preload the `.torrent` files info
+    #[arg(long, short)]
+    pub tracker_announce_i2p: Vec<Url>,
+
+    /// Announce timeout for each Tracker
+    #[arg(long, default_value_t = 5)]
     pub tracker_announce_timeout: u64,
+
+    /// Announce timeout for each I2P Tracker
+    #[arg(long, default_value_t = 5)]
+    pub tracker_announce_timeout_i2p: u64,
 
     /// Static port for outgoing announce connections
     #[arg(long, default_value_t = 6699)]
@@ -67,11 +79,11 @@ pub struct Config {
     #[arg(long)]
     pub tracker_announce_proxy_i2p: Option<Url>,
 
-    /// Bind I2P / SAM bridge on given host (default: `127.0.0.1`)
+    /// Bind I2P / SAM bridge on given host
     ///
     /// * only if the I2P `full_scrape` trackers in use
-    #[arg(long)]
-    pub tracker_announce_loopback_i2p: Option<IpAddr>,
+    #[arg(long, default_value_t = IpAddr::V4(Ipv4Addr::LOCALHOST))]
+    pub tracker_announce_loopback_i2p: IpAddr,
 
     /// Define initial peer(s) to preload the `.torrent` files info
     #[arg(long)]

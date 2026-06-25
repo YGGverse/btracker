@@ -14,6 +14,7 @@ use librqbit::{
 use log::*;
 use std::{collections::HashSet, num::NonZero, time::Duration};
 use tokio::time;
+use tracker::Tracker;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -41,24 +42,58 @@ async fn main() -> Result<()> {
         config.preload_max_filesize,
     )
     .unwrap();
-    // prepare config to get unique info-hashes for crawl
+
+    // init info-hash sources
     let full_scrape = full_scrape::Buffer::new(
         config.full_scrape,
         config.full_scrape_timeout,
         config.full_scrape_proxy.as_ref(),
         config.full_scrape_proxy_i2p.as_ref(),
     )?;
-    // prepare config to get peers for data preload
-    let tracker = tracker::Buffer::new(
-        config.tracker_announce,
-        config.tracker_announce_timeout,
-        config.tracker_announce_proxy.as_ref(),
-        config.tracker_announce_proxy_i2p.as_ref(),
-        config.tracker_announce_loopback_i2p.as_ref(),
-        (config.i2p_inbound_len, config.i2p_outbound_len),
-    )?;
 
+    // init trackers for data preload
+    let mut trackers: Vec<Tracker> =
+        Vec::with_capacity(config.tracker_announce.len() + config.tracker_announce_i2p.len());
+
+    for url in config.tracker_announce {
+        if !url.scheme().starts_with("http") {
+            todo!("HTTP trackers only!")
+        }
+        info!("init default tracker `{url}`");
+        trackers.push(Tracker::Default {
+            proxy: config
+                .tracker_announce_proxy
+                .as_ref()
+                .map(|u| u.to_string()),
+            timeout: Duration::from_secs(config.tracker_announce_timeout),
+            url,
+        })
+    }
+
+    for url in config.tracker_announce_i2p {
+        if !url.scheme().starts_with("http") {
+            todo!("HTTP trackers only!")
+        }
+        info!("init I2P tracker `{url}`");
+        trackers.push(Tracker::I2p {
+            loopback: config.tracker_announce_loopback_i2p,
+            proxy: config
+                .tracker_announce_proxy_i2p
+                .as_ref()
+                .map(|u| u.to_string()),
+            timeout: Duration::from_secs(config.tracker_announce_timeout_i2p),
+            inbound_len: config.i2p_inbound_len,
+            outbound_len: config.i2p_outbound_len,
+            url,
+        })
+    }
+
+    let tracker = tracker::Buffer(trackers);
+
+    // init ban list to skip unresolvable info-hashes between the queue iterations
     let mut ban = HashSet::with_capacity(config.index_capacity);
+
+    // start the crawler
     info!("crawler started at {time_init}");
     loop {
         let time_queue = Local::now();
