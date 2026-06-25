@@ -13,8 +13,8 @@ pub struct Preload {
     /// * it's probably the same location as `public` dir for the `btracker-http` frontend
     pub path: PathBuf,
 
-    /// Preload content file (names) match regex pattern (.torrent file only if `None`)
-    /// * see also `preload_max_filesize`, `preload_max_filecount` options
+    /// Preload content file (names) match `regex` pattern
+    /// * see also `max_filesize`, `max_filesize` options
     ///
     /// ## Example:
     ///
@@ -23,10 +23,10 @@ pub struct Preload {
     /// ```
     pub regex: Option<String>,
 
-    /// Max size sum of preloaded files per torrent (match `preload_regex`)
+    /// Max size sum of preloaded files per torrent (match `regex`)
     pub max_filesize: Option<u64>,
 
-    /// Max count of preloaded files per torrent (match `preload_regex`)
+    /// Max count of preloaded files per torrent (match `regex`)
     pub max_filecount: Option<usize>,
 }
 
@@ -68,7 +68,7 @@ pub struct Config {
     /// The P2P Blocklist file URL (to filter outgoing connections)
     ///
     /// * e.g. `file:///path/to/blocklist.txt` for local file
-    pub blocklist: Option<Url>,
+    pub blocklist_url: Option<Url>,
 
     /// Skip and ban slow or unresolvable hashes
     /// when the specified value in seconds is reached

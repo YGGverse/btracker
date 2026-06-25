@@ -123,7 +123,7 @@ async fn main() -> Result<()> {
             preload.root().clone(),
             SessionOptions {
                 bind_device_name: config.bind_device_name.clone(),
-                blocklist_url: config.blocklist.as_ref().map(|b| b.to_string()),
+                blocklist_url: config.blocklist_url.as_ref().map(|b| b.to_string()),
                 listen: None,
                 connect: Some(ConnectionOptions {
                     enable_tcp: !config.disable_tcp,
