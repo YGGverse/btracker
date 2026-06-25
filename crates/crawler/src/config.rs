@@ -77,9 +77,15 @@ pub struct Config {
     #[arg(long)]
     pub initial_peer: Option<Vec<SocketAddr>>,
 
-    /// Max peers per torrent
+    /// Max peers per tracker
     #[arg(long)]
-    pub peer_limit: Option<usize>,
+    pub tracker_announce_peer_limit: Option<usize>,
+
+    /// Max peers per I2P tracker
+    ///
+    /// * every peer will require to init dedicated SAM proxy
+    #[arg(long)]
+    pub tracker_announce_peer_limit_i2p: Option<usize>,
 
     /// Max I2P peers per torrent
     ///

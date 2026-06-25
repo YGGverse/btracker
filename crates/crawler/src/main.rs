@@ -130,72 +130,37 @@ async fn main() -> Result<()> {
             // init default timeout, but we can increase it later, by appending slow I2P / fallback peers
             let mut timeout = config.timeout;
 
-            // discover unique default peers first, then append I2P peers as the fallback (slow)
-            let default_peers = match tracker
+            // discover unique peers first
+            let initial_peers = match tracker
                 .peers(
                     &i,
                     config.tracker_announce_port,
-                    config.peer_limit,
+                    config.tracker_announce_peer_limit,
+                    config.tracker_announce_peer_limit_i2p,
                     config.initial_peer.as_ref(),
                 )
                 .await
             {
                 Ok(peers) => {
                     if peers.is_empty() {
-                        debug!("could not find default peers for torrent `{h}`.");
-                        None
+                        debug!("could not find peers for torrent `{h}`, skip.");
+                        continue;
                     } else {
                         let l = peers.len();
-                        debug!("collected {l} default peers for torrent `{h}`.");
+                        debug!("collected {l} peers for torrent `{h}`.");
                         if let Some(t) = config.timeout_increment {
                             timeout += t * l as u64;
                             debug!(
                                 "increase torrent session timeout to {timeout} ({t}*{l}) seconds."
                             )
                         }
-                        Some(peers)
+                        peers
                     }
                 }
                 Err(e) => {
-                    warn!("could not get default peers for torrent `{h}`: {e}.");
-                    None
+                    warn!("could not get peers for torrent `{h}`: {e}, skip.");
+                    continue;
                 }
-            };
-
-            let initial_peers = match default_peers {
-                Some(peers) => peers,
-                None => match tracker
-                    .peers_i2p(
-                        &i,
-                        config.tracker_announce_port,
-                        config.peer_limit_i2p,
-                        config.initial_peer.as_ref(),
-                    )
-                    .await
-                {
-                    Ok(peers) => {
-                        if peers.is_empty() {
-                            debug!(
-                                "could not find I2P peers for torrent `{h}`, nowhere to resolve, skip."
-                            );
-                            continue;
-                        } else {
-                            let l = peers.len();
-                            debug!("collected {l} I2P peers for torrent `{h}`.");
-                            if let Some(t) = config.timeout_increment_i2p {
-                                timeout += t * l as u64;
-                                debug!(
-                                    "increase torrent session timeout to {timeout} ({t}*{l}) seconds."
-                                )
-                            }
-                            peers
-                        }
-                    }
-                    Err(e) => {
-                        warn!("could not get fallback / I2P peer for torrent `{h}`: {e}, skip.");
-                        continue;
-                    }
-                },
             };
 
             // make sure the list is not empty as unexpected here

@@ -85,7 +85,8 @@ impl Tracker {
         &self,
         info_hash: &Id20,
         announce_port: u16,
-        limit_per_kind: Option<usize>,
+        peers_limit_per_tracker: Option<usize>,
+        peers_limit_per_tracker_i2p: Option<usize>,
     ) -> Result<HashSet<SocketAddr>> {
         Ok(match self {
             Self::Default {
@@ -101,7 +102,7 @@ impl Tracker {
                         .await?
                         .peers
                         .0,
-                    limit_per_kind,
+                    peers_limit_per_tracker,
                 );
 
                 let mut b = HashSet::with_capacity(peers.len());
@@ -141,7 +142,7 @@ impl Tracker {
                         .await?
                         .peers
                         .0,
-                    limit_per_kind,
+                    peers_limit_per_tracker_i2p,
                 );
 
                 let mut b = HashSet::with_capacity(peers.len());
@@ -215,6 +216,13 @@ impl Tracker {
             }
         })
     }
+
+    fn url(&self) -> &Url {
+        match self {
+            Self::Default { url, .. } => url,
+            Self::I2p { url, .. } => url,
+        }
+    }
 }
 
 pub struct Buffer(Vec<Tracker>);
@@ -252,42 +260,32 @@ impl Buffer {
         Ok(Self(b))
     }
 
-    /// Return resolved peers from default trackers
-    /// * optionally extend with `initial_peers`
+    /// Return peers from trackers
     pub async fn peers(
         &self,
         info_hash: &Id20,
         announce_port: u16,
-        limit: Option<usize>,
+        peers_limit_per_tracker: Option<usize>,
+        peers_limit_per_tracker_i2p: Option<usize>,
         force_extend_with_peers: Option<&Vec<SocketAddr>>,
     ) -> Result<HashSet<SocketAddr>> {
         let mut peers = HashSet::new();
-        for tracker in self
-            .0
-            .iter()
-            .filter(|t| matches!(t, Tracker::Default { .. }))
-        {
-            peers.extend(tracker.peers(info_hash, announce_port, limit).await?)
-        }
-        if let Some(p) = force_extend_with_peers {
-            debug!("[tracker] forcefully extend with {} peers ({p:?})", p.len());
-            peers.extend(p);
-        }
-        Ok(peers)
-    }
-
-    /// Return resolved peers from I2P trackers
-    /// * optionally extend with `initial_peers`
-    pub async fn peers_i2p(
-        &self,
-        info_hash: &Id20,
-        announce_port: u16,
-        limit: Option<usize>,
-        force_extend_with_peers: Option<&Vec<SocketAddr>>,
-    ) -> Result<HashSet<SocketAddr>> {
-        let mut peers = HashSet::new();
-        for tracker in self.0.iter().filter(|t| matches!(t, Tracker::I2p { .. })) {
-            peers.extend(tracker.peers(info_hash, announce_port, limit).await?)
+        for tracker in self.0.iter() {
+            debug!(
+                "[tracker] get peers from `{}` for `{}`...",
+                info_hash.as_string(),
+                tracker.url()
+            );
+            peers.extend(
+                tracker
+                    .peers(
+                        info_hash,
+                        announce_port,
+                        peers_limit_per_tracker,
+                        peers_limit_per_tracker_i2p,
+                    )
+                    .await?,
+            )
         }
         if let Some(p) = force_extend_with_peers {
             debug!("[tracker] forcefully extend with {} peers ({p:?})", p.len());
