@@ -58,7 +58,7 @@ async fn main() -> Result<()> {
         if !i.url.scheme().starts_with("http") {
             todo!("HTTP trackers only!")
         }
-        info!("init full scrape source `{}`", i.url);
+        info!("init full-scrape source `{}`", i.url);
         scrape.push(FullScrape {
             proxy: i.proxy_url,
             query: Scrape::new(i.url.as_str(), None)?,
