@@ -324,7 +324,7 @@ async fn main() -> Result<()> {
             }
         }
         session.stop().await;
-        info!(
+        debug!(
             "queue completed at {time_queue} (time: {} / uptime: {} / banned: {}) await {} seconds to continue...",
             Local::now()
                 .signed_duration_since(time_queue)
