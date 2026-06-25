@@ -178,12 +178,14 @@ async fn main() -> Result<()> {
                 debug!("torrent `{h}` exists, skip.");
                 continue;
             }
+
             // skip banned entry, remove it from the ban list to retry on the next iteration
             if ban.remove(&i) {
                 debug!("torrent `{h}` is banned, skip.");
                 continue;
             }
-            info!("resolve `{h}`...");
+
+            debug!("resolve `{h}`...");
 
             // discover unique peers first
             let initial_peers = match tracker.peers(&i).await {
@@ -309,7 +311,7 @@ async fn main() -> Result<()> {
                     }
                     Ok(_) => unreachable!(),
                     Err(e) => {
-                        warn!("failed to resolve torrent `{h}`: `{e}`, ban temporarily.");
+                        debug!("failed to resolve torrent `{h}`: `{e}`, ban temporarily.");
                         assert!(ban.insert(i))
                     }
                 },
