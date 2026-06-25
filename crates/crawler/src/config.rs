@@ -46,5 +46,6 @@ pub struct Config {
     /// * e.g. `file:///path/to/blocklist.txt` for local file
     pub blocklist_url: Option<Url>,
 
+    #[serde(default)]
     pub timeout: Timeout,
 }

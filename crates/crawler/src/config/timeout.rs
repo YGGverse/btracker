@@ -10,3 +10,12 @@ pub struct Timeout {
     #[serde_inline_default(60)]
     pub torrent_preload_seconds: u64,
 }
+
+impl Default for Timeout {
+    fn default() -> Self {
+        Self {
+            add_torrent_seconds: 60,
+            torrent_preload_seconds: 60,
+        }
+    }
+}
