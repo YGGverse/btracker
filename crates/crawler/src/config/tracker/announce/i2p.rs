@@ -27,7 +27,7 @@ pub struct I2p {
     ///
     /// * only if the I2P `full_scrape` trackers in use
     #[serde_inline_default(IpAddr::V4(Ipv4Addr::LOCALHOST))]
-    pub loopback: IpAddr,
+    pub loopback_host: IpAddr,
 
     /// How many hops do the inbound tunnels of the session have
     #[serde_inline_default(3)]

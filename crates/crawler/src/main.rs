@@ -92,7 +92,7 @@ async fn main() -> Result<()> {
         }
         info!("init I2P tracker `{}`", i.url);
         trackers.push(Tracker::I2p {
-            loopback: i.loopback,
+            loopback: i.loopback_host,
             proxy: i.proxy_url,
             timeout: Duration::from_secs(i.timeout),
             inbound_len: i.inbound_len,
