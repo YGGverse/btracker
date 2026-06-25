@@ -87,6 +87,7 @@ impl Tracker {
         announce_port: u16,
         peers_limit_per_tracker: Option<usize>,
         peers_limit_per_tracker_i2p: Option<usize>,
+        peers_b32: &mut HashSet<String>,
     ) -> Result<HashSet<SocketAddr>> {
         Ok(match self {
             Self::Default {
@@ -151,6 +152,14 @@ impl Tracker {
                     match p {
                         // Create SAM bridge / local proxy as librqbit yet not supported I2P connections
                         Peer::I2p(peer) => {
+                            if !peers_b32.insert(peer.b32.clone()) {
+                                debug!(
+                                    "[tracker] b32 value `{}` for peer `{peer}` on `{loopback}` exists, skip.",
+                                    &peer.b32
+                                );
+                                continue;
+                            }
+
                             debug!("[tracker] bind proxy listener for `{peer}` on `{loopback}`...");
 
                             let listener =
@@ -269,7 +278,9 @@ impl Buffer {
         peers_limit_per_tracker_i2p: Option<usize>,
         force_extend_with_peers: Option<&Vec<SocketAddr>>,
     ) -> Result<HashSet<SocketAddr>> {
-        let mut peers = HashSet::new();
+        let mut peers_b32 = HashSet::new(); // make sure I2P peers collected are unique as bind on different SocketAddr
+        let mut peers = HashSet::new(); // unique peers buffer collected from all trackers
+
         for tracker in self.0.iter() {
             debug!(
                 "[tracker] get peers from `{}` for `{}`...",
@@ -283,14 +294,17 @@ impl Buffer {
                         announce_port,
                         peers_limit_per_tracker,
                         peers_limit_per_tracker_i2p,
+                        &mut peers_b32,
                     )
                     .await?,
             )
         }
+
         if let Some(p) = force_extend_with_peers {
             debug!("[tracker] forcefully extend with {} peers ({p:?})", p.len());
             peers.extend(p);
         }
+
         Ok(peers)
     }
 
