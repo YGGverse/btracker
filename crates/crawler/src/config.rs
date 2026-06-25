@@ -87,11 +87,6 @@ pub struct Config {
     #[arg(long)]
     pub tracker_announce_peer_limit_i2p: Option<usize>,
 
-    /// Max I2P peers per torrent
-    ///
-    /// * only if the I2P `full_scrape` trackers in use
-    pub peer_limit_i2p: Option<usize>,
-
     /// Appends `--tracker` value to magnets and torrents
     #[arg(long, default_value_t = false)]
     pub export_trackers: bool,
