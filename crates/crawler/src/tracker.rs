@@ -165,7 +165,7 @@ fn take_random_peers(mut peers: Vec<Peer>, limit: Option<usize>) -> Vec<Peer> {
         Some(l) => {
             let p: Vec<Peer> = peers.into_iter().take(l).collect();
             debug!(
-                "[tracker] take {}/{total} random peers as limited to {l}",
+                "[tracker] take {}/{total} random peers (limited to {l} max)",
                 p.len()
             );
             p
