@@ -7,3 +7,4 @@ SSD-friendly FS crawler of BEP 48 / Full Scrape, based on [librqbit](https://git
 
 > [!NOTE]
 > * By using OpenTracker as the index source, please make sure `FEATURES+=-DWANT_FULLSCRAPE` is enabled!
+> * I2P option in development, do not use it on production!
