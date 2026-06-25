@@ -138,8 +138,8 @@ impl Buffer {
         for tracker in self.0.iter() {
             debug!(
                 "[tracker] get peers from `{}` for `{}`...",
+                tracker.url(),
                 info_hash.as_string(),
-                tracker.url()
             );
             peers.extend(tracker.peers(info_hash, &mut peers_b32).await?)
         }
