@@ -51,7 +51,13 @@ impl Tracker {
                     btpeer::http::announce(&announce, *timeout, proxy.as_ref().map(|u| u.as_str()))
                         .await?
                         .peers
-                        .0,
+                        .0
+                        .into_iter()
+                        .filter(|p| match p {
+                            Peer::Default(this) => this.port != *port,
+                            Peer::I2p(..) => false,
+                        })
+                        .collect(), // @TODO same for I2P
                     *peers_limit,
                 );
 
@@ -61,7 +67,9 @@ impl Tracker {
                     match p {
                         Peer::Default(peer) => handle_default_peer(&mut b, peer),
                         Peer::I2p(peer) => {
-                            warn!("[tracker] unexpected peer `{peer}` from tracker `{url}`, skip")
+                            unreachable!(
+                                "[tracker] unexpected peer `{peer}` from tracker `{url}`, skip"
+                            )
                         }
                     }
                 }
@@ -165,13 +173,13 @@ fn take_random_peers(mut peers: Vec<Peer>, limit: Option<usize>) -> Vec<Peer> {
         Some(l) => {
             let p: Vec<Peer> = peers.into_iter().take(l).collect();
             debug!(
-                "[tracker] take {}/{total} random peers (limited to {l} max)",
+                "[tracker] taken random peers: {}/{total} (limited to {l} max)",
                 p.len()
             );
             p
         }
         None => {
-            debug!("[tracker] take all {total} peers");
+            debug!("[tracker] taken random peers: {total}");
             peers
         }
     }
@@ -203,7 +211,7 @@ async fn handle_i2p_peer(
         return Ok(());
     }
 
-    debug!("[tracker] bind proxy listener for `{peer}` on `{loopback}`...");
+    debug!("[tracker] bind SAM proxy for `{peer}` on `{loopback}`...");
 
     let listener = tokio::net::TcpListener::bind(SocketAddr::new(loopback, 0)).await?;
 
@@ -222,7 +230,10 @@ async fn handle_i2p_peer(
     })
     .await?;
 
-    debug!("[tracker] listening incoming connections for `{peer}` on `{p}`...");
+    debug!(
+        "[tracker] listening incoming connections for `{peer}` on `{p}` (`{}`) ...",
+        session.destination()
+    );
 
     tokio::spawn(async move {
         while let Ok((mut local, client)) = listener.accept().await {
