@@ -79,14 +79,6 @@ pub struct Config {
     #[arg(long, default_value_t = false)]
     pub export_trackers: bool,
 
-    /// Enable DHT resolver
-    #[arg(long, default_value_t = false)]
-    pub enable_dht: bool,
-
-    /// Enable LSD multicast
-    #[arg(long, default_value_t = false)]
-    pub enable_lsd: bool,
-
     /// Disable TCP connection
     #[arg(long, default_value_t = false)]
     pub disable_tcp: bool,

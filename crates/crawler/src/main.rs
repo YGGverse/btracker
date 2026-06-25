@@ -8,8 +8,8 @@ use chrono::Local;
 use clap::Parser;
 use config::Config;
 use librqbit::{
-    AddTorrent, AddTorrentOptions, AddTorrentResponse, ConnectionOptions, DhtSessionConfig,
-    Session, SessionOptions, limits::LimitsConfig,
+    AddTorrent, AddTorrentOptions, AddTorrentResponse, ConnectionOptions, Session, SessionOptions,
+    limits::LimitsConfig,
 };
 use log::*;
 use std::{collections::HashSet, num::NonZero, time::Duration};
@@ -79,15 +79,8 @@ async fn main() -> Result<()> {
                     proxy_url: config.proxy.as_ref().map(|u| u.to_string()),
                     ..ConnectionOptions::default()
                 }),
-                dht: if config.enable_dht {
-                    Some(DhtSessionConfig {
-                        persistence: None,
-                        ..DhtSessionConfig::default()
-                    })
-                } else {
-                    None
-                },
-                disable_local_service_discovery: !config.enable_lsd,
+                dht: None,
+                disable_local_service_discovery: true,
                 disable_upload: true,
                 fastresume: false,
                 persistence: None,
