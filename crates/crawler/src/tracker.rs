@@ -8,7 +8,7 @@ use std::{
     time::Duration,
 };
 use url::Url;
-use yosemite::{Session, SessionOptions, style::Stream};
+use yosemite::{Session, style::Stream};
 
 enum Tracker {
     Default {
@@ -21,6 +21,8 @@ enum Tracker {
         proxy: String,
         timeout: Duration,
         url: Url,
+        inbound_len: usize,
+        outbound_len: usize,
     },
 }
 
@@ -42,7 +44,15 @@ impl Tracker {
     }
 
     /// Construct I2P tracker
-    fn i2p(url: Url, timeout: u64, proxy: String, loopback: Option<IpAddr>) -> Result<Self> {
+    fn i2p(
+        url: Url,
+        timeout: u64,
+        proxy: String,
+
+        inbound_len: usize,
+        outbound_len: usize,
+        loopback: Option<IpAddr>,
+    ) -> Result<Self> {
         if !url.scheme().starts_with("http") {
             bail!("HTTP trackers only!")
         }
@@ -65,6 +75,8 @@ impl Tracker {
             proxy,
             timeout: Duration::from_secs(timeout),
             url,
+            inbound_len,
+            outbound_len,
         })
     }
 
@@ -74,7 +86,6 @@ impl Tracker {
         info_hash: &Id20,
         announce_port: u16,
         limit_per_kind: Option<usize>,
-        i2p_session_options: Option<SessionOptions>,
     ) -> Result<HashSet<SocketAddr>> {
         Ok(match self {
             Self::Default {
@@ -115,6 +126,8 @@ impl Tracker {
                 b
             }
             Self::I2p {
+                inbound_len,
+                outbound_len,
                 loopback,
                 proxy,
                 timeout,
@@ -155,9 +168,11 @@ impl Tracker {
                                 )
                             }
 
-                            let mut session = Session::<Stream>::new(
-                                i2p_session_options.clone().unwrap_or_default(),
-                            )
+                            let mut session = Session::<Stream>::new(yosemite::SessionOptions {
+                                inbound_len: *inbound_len,
+                                outbound_len: *outbound_len,
+                                ..yosemite::SessionOptions::default()
+                            })
                             .await?;
 
                             debug!(
@@ -212,6 +227,7 @@ impl Buffer {
         proxy: Option<&Url>,
         proxy_i2p: Option<&Url>,
         loopback_i2p: Option<&IpAddr>,
+        (inbound_len, outbound_len): (usize, usize),
     ) -> Result<Self> {
         let mut b = Vec::with_capacity(trackers.len());
         for url in trackers {
@@ -225,6 +241,8 @@ impl Buffer {
                             bail!("[tracker] found I2P tracker but its proxy was not configured")
                         }
                     },
+                    inbound_len,
+                    outbound_len,
                     loopback_i2p.copied(),
                 )?
             } else {
@@ -249,7 +267,7 @@ impl Buffer {
             .iter()
             .filter(|t| matches!(t, Tracker::Default { .. }))
         {
-            peers.extend(tracker.peers(info_hash, announce_port, limit, None).await?)
+            peers.extend(tracker.peers(info_hash, announce_port, limit).await?)
         }
         if let Some(p) = force_extend_with_peers {
             debug!("[tracker] forcefully extend with {} peers ({p:?})", p.len());
@@ -264,17 +282,12 @@ impl Buffer {
         &self,
         info_hash: &Id20,
         announce_port: u16,
-        options: Option<SessionOptions>,
         limit: Option<usize>,
         force_extend_with_peers: Option<&Vec<SocketAddr>>,
     ) -> Result<HashSet<SocketAddr>> {
         let mut peers = HashSet::new();
         for tracker in self.0.iter().filter(|t| matches!(t, Tracker::I2p { .. })) {
-            peers.extend(
-                tracker
-                    .peers(info_hash, announce_port, limit, options.clone())
-                    .await?,
-            )
+            peers.extend(tracker.peers(info_hash, announce_port, limit).await?)
         }
         if let Some(p) = force_extend_with_peers {
             debug!("[tracker] forcefully extend with {} peers ({p:?})", p.len());
