@@ -54,15 +54,15 @@ async fn main() -> Result<()> {
     // init info-hash sources
     let mut scrape = Vec::with_capacity(config.tracker.scrape.len());
 
-    for s in config.tracker.scrape {
-        if !s.url.scheme().starts_with("http") {
+    for i in config.tracker.scrape {
+        if !i.url.scheme().starts_with("http") {
             todo!("HTTP trackers only!")
         }
-        info!("init full scrape source `{}`", s.url);
+        info!("init full scrape source `{}`", i.url);
         scrape.push(FullScrape {
-            proxy: s.proxy_url,
-            query: Scrape::new(s.url.as_str(), None)?,
-            timeout: Duration::from_secs(s.timeout),
+            proxy: i.proxy_url,
+            query: Scrape::new(i.url.as_str(), None)?,
+            timeout: Duration::from_secs(i.timeout),
         })
     }
 
@@ -72,34 +72,34 @@ async fn main() -> Result<()> {
     let mut trackers =
         Vec::with_capacity(config.tracker.announce.len() + config.tracker.announce_i2p.len());
 
-    for t in config.tracker.announce {
-        if !t.url.scheme().starts_with("http") {
+    for i in config.tracker.announce {
+        if !i.url.scheme().starts_with("http") {
             todo!("HTTP trackers only!")
         }
-        info!("init tracker `{}`", t.url);
+        info!("init tracker `{}`", i.url);
         trackers.push(Tracker::Default {
-            proxy: t.proxy_url,
-            timeout: Duration::from_secs(t.timeout),
-            url: t.url,
-            port: t.port,
-            peers_limit: t.peers_limit,
+            proxy: i.proxy_url,
+            timeout: Duration::from_secs(i.timeout),
+            url: i.url,
+            port: i.port,
+            peers_limit: i.peers_limit,
         })
     }
 
-    for t in config.tracker.announce_i2p {
-        if !t.url.scheme().starts_with("http") {
+    for i in config.tracker.announce_i2p {
+        if !i.url.scheme().starts_with("http") {
             todo!("HTTP trackers only!")
         }
-        info!("init I2P tracker `{}`", t.url);
+        info!("init I2P tracker `{}`", i.url);
         trackers.push(Tracker::I2p {
-            loopback: t.loopback,
-            proxy: t.proxy_url,
-            timeout: Duration::from_secs(t.timeout),
-            inbound_len: t.inbound_len,
-            outbound_len: t.outbound_len,
-            url: t.url,
-            port: t.port,
-            peers_limit: t.peers_limit,
+            loopback: i.loopback,
+            proxy: i.proxy_url,
+            timeout: Duration::from_secs(i.timeout),
+            inbound_len: i.inbound_len,
+            outbound_len: i.outbound_len,
+            url: i.url,
+            port: i.port,
+            peers_limit: i.peers_limit,
         })
     }
 
