@@ -213,7 +213,7 @@ async fn main() -> Result<()> {
             // run the crawler in single thread for performance reasons,
             // use `timeout` argument option to skip the dead connections.
             match time::timeout(
-                Duration::from_secs(config.timeout_seconds),
+                Duration::from_secs(config.timeout_add_torrent_seconds),
                 session.add_torrent(
                     AddTorrent::from_url(tracker.magnet(&h)),
                     Some(AddTorrentOptions {
@@ -288,7 +288,12 @@ async fn main() -> Result<()> {
                         session.update_only_files(&mt, &only_files).await?;
                         session.unpause(&mt).await?;
                         debug!("begin torrent `{h}` preload...");
-                        if let Err(e) = mt.wait_until_completed().await {
+                        if let Err(e) = time::timeout(
+                            Duration::from_secs(config.timeout_torrent_preload_seconds),
+                            mt.wait_until_completed(),
+                        )
+                        .await
+                        {
                             info!(
                                 "preload torrent data for `{h}` failed (`{e}`), ban temporarily.",
                             );

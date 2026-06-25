@@ -44,11 +44,9 @@ pub struct Config {
     /// * e.g. `file:///path/to/blocklist.txt` for local file
     pub blocklist_url: Option<Url>,
 
-    /// Skip and ban slow or unresolvable hashes
-    /// when the specified value in seconds is reached
-    ///
-    /// * the ban time is dynamically calculated based on the current ban list collected
-    /// * tip: increase this value when using I2P features
     #[serde_inline_default(60)]
-    pub timeout_seconds: u64,
+    pub timeout_add_torrent_seconds: u64,
+
+    #[serde_inline_default(60)]
+    pub timeout_torrent_preload_seconds: u64,
 }
