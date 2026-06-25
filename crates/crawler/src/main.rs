@@ -3,10 +3,12 @@ mod full_scrape;
 mod tracker;
 
 use anyhow::Result;
+use btpeer::http::query::Scrape;
 use btracker_fs::crawler::Storage;
 use chrono::Local;
 use clap::Parser;
 use config::Config;
+use full_scrape::FullScrape;
 use librqbit::{
     AddTorrent, AddTorrentOptions, AddTorrentResponse, ConnectionOptions, Session, SessionOptions,
     limits::LimitsConfig,
@@ -44,22 +46,44 @@ async fn main() -> Result<()> {
     .unwrap();
 
     // init info-hash sources
-    let full_scrape = full_scrape::Buffer::new(
-        config.full_scrape,
-        config.full_scrape_timeout,
-        config.full_scrape_proxy.as_ref(),
-        config.full_scrape_proxy_i2p.as_ref(),
-    )?;
+    let mut full_scrapes =
+        Vec::with_capacity(config.full_scrape.len() + config.full_scrape_i2p.len());
 
-    // init trackers for data preload
-    let mut trackers: Vec<Tracker> =
+    for url in config.full_scrape {
+        if !url.scheme().starts_with("http") {
+            todo!("HTTP trackers only!")
+        }
+        info!("init full scrape source `{url}`");
+        full_scrapes.push(FullScrape {
+            proxy: config.full_scrape_proxy.as_ref().map(|u| u.to_string()),
+            query: Scrape::new(url.as_str(), None)?,
+            timeout: Duration::from_secs(config.full_scrape_timeout),
+        })
+    }
+
+    for url in config.full_scrape_i2p {
+        if !url.scheme().starts_with("http") {
+            todo!("HTTP trackers only!")
+        }
+        info!("init I2P full scrape source `{url}`");
+        full_scrapes.push(FullScrape {
+            proxy: config.full_scrape_proxy_i2p.as_ref().map(|u| u.to_string()),
+            query: Scrape::new(url.as_str(), None)?,
+            timeout: Duration::from_secs(config.full_scrape_timeout_i2p),
+        })
+    }
+
+    let full_scrape = full_scrape::Buffer(full_scrapes);
+
+    // init trackers (for DHT data preload)
+    let mut trackers =
         Vec::with_capacity(config.tracker_announce.len() + config.tracker_announce_i2p.len());
 
     for url in config.tracker_announce {
         if !url.scheme().starts_with("http") {
             todo!("HTTP trackers only!")
         }
-        info!("init default tracker `{url}`");
+        info!("init tracker `{url}`");
         trackers.push(Tracker::Default {
             proxy: config
                 .tracker_announce_proxy

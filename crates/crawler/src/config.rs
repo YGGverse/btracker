@@ -30,8 +30,14 @@ pub struct Config {
     /// How long to wait for tracker full scrape response
     /// * tip: by using OpenTracker,
     ///   make sure `FEATURES+=-DWANT_FULLSCRAPE` is enabled!
-    #[arg(long, default_value_t = 15)]
+    #[arg(long, default_value_t = 5)]
     pub full_scrape_timeout: u64,
+
+    /// How long to wait for I2P tracker full scrape response
+    /// * tip: by using OpenTracker,
+    ///   make sure `FEATURES+=-DWANT_FULLSCRAPE` is enabled!
+    #[arg(long, default_value_t = 5)]
+    pub full_scrape_timeout_i2p: u64,
 
     /// Use HTTP(s) proxy to resolve `full_scrape` trackers, would be `http://127.0.0.1:9050`
     #[arg(long)]
