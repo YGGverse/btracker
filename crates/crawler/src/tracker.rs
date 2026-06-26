@@ -58,7 +58,7 @@ impl Tracker {
                             Peer::Default(this) => {
                                 url.host_str()
                                     .is_some_and(|h| !h.contains(&this.host.to_string()))
-                                    && this.port != *port
+                                    && this.port != *port // exclude self
                             }
                             Peer::I2p(..) => false,
                         })
@@ -99,7 +99,7 @@ impl Tracker {
                 let announce =
                     btpeer::http::query::Announce::new(url.as_str(), &info_hash.0, *port)?;
 
-                let destination = sam.read().await.destination().to_string();
+                let b32 = b32(sam.read().await.destination().as_bytes());
 
                 let peers = take_random_peers(
                     btpeer::http::announce_i2p(
@@ -112,7 +112,7 @@ impl Tracker {
                     .0
                     .into_iter()
                     .filter(|p| match p {
-                        Peer::I2p(this) => this.b32 == destination,
+                        Peer::I2p(this) => this.b32 != b32, // exclude self
                         Peer::Default(..) => false,
                     })
                     .collect(),
@@ -132,7 +132,7 @@ impl Tracker {
                                 continue;
                             }
 
-                            debug!("[tracker] bind SAM proxy for `{peer}` on `{loopback}`...");
+                            debug!("[tracker] init SAM proxy for `{peer}` on `{loopback}`...");
 
                             let listener =
                                 tokio::net::TcpListener::bind(SocketAddr::new(*loopback, 0))
@@ -147,7 +147,7 @@ impl Tracker {
                             }
 
                             debug!(
-                                "[tracker] listening incoming connections for `{peer}` on `{p}` ({destination}) ...",
+                                "[tracker] listening incoming connections for `{peer}` on `{p}` as `{b32}`...",
                             );
 
                             let session = sam.clone();
@@ -247,4 +247,18 @@ fn take_random_peers(mut peers: Vec<Peer>, limit: Option<usize>) -> Vec<Peer> {
             peers
         }
     }
+}
+
+fn b32(destination: &[u8]) -> String {
+    use data_encoding::BASE32_NOPAD;
+    use sha2::{Digest, Sha256};
+
+    let mut hasher = Sha256::new();
+    hasher.update(destination);
+    let hash_result = hasher.finalize();
+
+    format!(
+        "{}.b32.i2p",
+        BASE32_NOPAD.encode(&hash_result).to_lowercase()
+    )
 }
