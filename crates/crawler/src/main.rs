@@ -17,8 +17,8 @@ use librqbit::{
 use log::*;
 use opt::Opt;
 use regex::Regex;
-use std::{collections::HashSet, num::NonZero, time::Duration};
-use tokio::time;
+use std::{collections::HashSet, num::NonZero, sync::Arc, time::Duration};
+use tokio::{sync::RwLock, time};
 use tracker::Tracker;
 
 #[tokio::main]
@@ -94,6 +94,7 @@ async fn main() -> Result<()> {
     }
 
     if let Some(a) = config.tracker.announce_i2p {
+        use yosemite::{Session, SessionOptions};
         for i in a {
             if !i.url.scheme().starts_with("http") {
                 todo!("HTTP trackers only!")
@@ -103,11 +104,17 @@ async fn main() -> Result<()> {
                 loopback: i.loopback_host,
                 proxy: i.proxy_url,
                 timeout: Duration::from_secs(i.timeout),
-                inbound_len: i.inbound_len,
-                outbound_len: i.outbound_len,
                 url: i.url,
                 port: i.port,
                 peers_limit: i.peers_limit,
+                sam: Arc::new(RwLock::new(
+                    Session::new(SessionOptions {
+                        inbound_len: i.inbound_len,
+                        outbound_len: i.outbound_len,
+                        ..SessionOptions::default()
+                    })
+                    .await?,
+                )),
             })
         }
     }

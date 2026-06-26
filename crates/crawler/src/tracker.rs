@@ -5,8 +5,10 @@ use log::*;
 use std::{
     collections::HashSet,
     net::{IpAddr, SocketAddr},
+    sync::Arc,
     time::Duration,
 };
+use tokio::sync::RwLock;
 use url::Url;
 use yosemite::{Session, style::Stream};
 
@@ -19,14 +21,13 @@ pub enum Tracker {
         url: Url,
     },
     I2p {
-        inbound_len: usize,
         loopback: IpAddr,
-        outbound_len: usize,
         peers_limit: Option<usize>,
         port: u16,
         proxy: Option<Url>,
         timeout: Duration,
         url: Url,
+        sam: Arc<RwLock<Session<Stream>>>,
     },
 }
 
@@ -61,7 +62,7 @@ impl Tracker {
                             }
                             Peer::I2p(..) => false,
                         })
-                        .collect(), // @TODO same for I2P
+                        .collect(),
                     *peers_limit,
                 );
 
@@ -69,7 +70,14 @@ impl Tracker {
 
                 for p in peers {
                     match p {
-                        Peer::Default(peer) => handle_default_peer(&mut b, peer),
+                        Peer::Default(peer) => {
+                            let p = SocketAddr::new(peer.host, peer.port);
+                            if b.insert(p) {
+                                debug!("[tracker] add peer: `{p}`")
+                            } else {
+                                debug!("[tracker] replace existing peer: `{p}`")
+                            }
+                        }
                         Peer::I2p(peer) => {
                             unreachable!(
                                 "[tracker] unexpected peer `{peer}` from tracker `{url}`, skip"
@@ -80,17 +88,18 @@ impl Tracker {
                 b
             }
             Self::I2p {
-                inbound_len,
                 loopback,
-                outbound_len,
                 peers_limit,
                 port,
                 proxy,
+                sam,
                 timeout,
                 url,
             } => {
                 let announce =
                     btpeer::http::query::Announce::new(url.as_str(), &info_hash.0, *port)?;
+
+                let destination = sam.read().await.destination().to_string();
 
                 let peers = take_random_peers(
                     btpeer::http::announce_i2p(
@@ -100,7 +109,13 @@ impl Tracker {
                     )
                     .await?
                     .peers
-                    .0,
+                    .0
+                    .into_iter()
+                    .filter(|p| match p {
+                        Peer::I2p(this) => this.b32 == destination,
+                        Peer::Default(..) => false,
+                    })
+                    .collect(),
                     *peers_limit,
                 );
 
@@ -109,15 +124,60 @@ impl Tracker {
                 for p in peers {
                     match p {
                         Peer::I2p(peer) => {
-                            handle_i2p_peer(
-                                &mut b,
-                                peers_b32,
-                                peer,
-                                *loopback,
-                                *inbound_len,
-                                *outbound_len,
-                            )
-                            .await?
+                            if !peers_b32.insert(peer.b32.clone()) {
+                                debug!(
+                                    "[tracker] b32 value `{}` for peer `{peer}` on `{loopback}` exists, skip.",
+                                    &peer.b32
+                                );
+                                continue;
+                            }
+
+                            debug!("[tracker] bind SAM proxy for `{peer}` on `{loopback}`...");
+
+                            let listener =
+                                tokio::net::TcpListener::bind(SocketAddr::new(*loopback, 0))
+                                    .await?;
+
+                            let p = listener.local_addr()?;
+
+                            if b.insert(p) {
+                                debug!("[tracker] bind I2P peer `{peer}` as `{p}`")
+                            } else {
+                                debug!("[tracker] bind existing I2P peer `{peer}` as `{p}`")
+                            }
+
+                            debug!(
+                                "[tracker] listening incoming connections for `{peer}` on `{p}` ({destination}) ...",
+                            );
+
+                            let session = sam.clone();
+                            tokio::spawn(async move {
+                                while let Ok((mut local, client)) = listener.accept().await {
+                                    debug!(
+                                        "[tracker] accepting SAM connection from {client} ({})",
+                                        &peer.b32
+                                    );
+                                    if let Ok(mut remote) =
+                                        session.write().await.connect(&peer.b32).await
+                                    {
+                                        debug!(
+                                            "[tracker] begin SAM connection to `{}` ({})",
+                                            remote.remote_destination(),
+                                            &peer.b32
+                                        );
+                                        match tokio::io::copy_bidirectional(&mut local, &mut remote)
+                                            .await
+                                        {
+                                            Ok((a, b)) => trace!(
+                                                "[tracker] copied {a}/{b} to `{}` ({})",
+                                                remote.remote_destination(),
+                                                &peer.b32
+                                            ),
+                                            Err(e) => warn!("{e}"),
+                                        }
+                                    }
+                                }
+                            });
                         }
                         Peer::Default(peer) => {
                             warn!(
@@ -187,82 +247,4 @@ fn take_random_peers(mut peers: Vec<Peer>, limit: Option<usize>) -> Vec<Peer> {
             peers
         }
     }
-}
-
-fn handle_default_peer(peers: &mut HashSet<SocketAddr>, peer: btpeer::peer::Default) {
-    let p = SocketAddr::new(peer.host, peer.port);
-    if peers.insert(p) {
-        debug!("[tracker] add peer: `{p}`")
-    } else {
-        debug!("[tracker] replace existing peer: `{p}`")
-    }
-}
-
-/// Create SAM bridge / local proxy as librqbit yet not supported I2P connections
-async fn handle_i2p_peer(
-    peers: &mut HashSet<SocketAddr>,
-    peers_b32: &mut HashSet<String>,
-    peer: btpeer::peer::I2p,
-    loopback: IpAddr,
-    inbound_len: usize,
-    outbound_len: usize,
-) -> Result<()> {
-    if !peers_b32.insert(peer.b32.clone()) {
-        debug!(
-            "[tracker] b32 value `{}` for peer `{peer}` on `{loopback}` exists, skip.",
-            &peer.b32
-        );
-        return Ok(());
-    }
-
-    debug!("[tracker] bind SAM proxy for `{peer}` on `{loopback}`...");
-
-    let listener = tokio::net::TcpListener::bind(SocketAddr::new(loopback, 0)).await?;
-
-    let p = listener.local_addr()?;
-
-    if peers.insert(p) {
-        debug!("[tracker] bind I2P peer `{peer}` as `{p}`; init SAM session...")
-    } else {
-        debug!("[tracker] bind existing I2P peer `{peer}` as `{p}`; init SAM session...")
-    }
-
-    let mut session = Session::<Stream>::new(yosemite::SessionOptions {
-        inbound_len,
-        outbound_len,
-        ..yosemite::SessionOptions::default()
-    })
-    .await?;
-
-    debug!(
-        "[tracker] listening incoming connections for `{peer}` on `{p}` (`{}`) ...",
-        session.destination()
-    );
-
-    tokio::spawn(async move {
-        while let Ok((mut local, client)) = listener.accept().await {
-            debug!(
-                "[tracker] accepting SAM connection from {client} to {:?} ({})",
-                local.peer_addr(),
-                &peer.b32
-            );
-            if let Ok(mut remote) = session.connect(&peer.b32).await {
-                debug!(
-                    "[tracker] begin SAM connection to `{}` ({})",
-                    remote.remote_destination(),
-                    &peer.b32
-                );
-                match tokio::io::copy_bidirectional(&mut local, &mut remote).await {
-                    Ok((a, b)) => trace!(
-                        "[tracker] copied {a}/{b} to `{}` ({})",
-                        remote.remote_destination(),
-                        &peer.b32
-                    ),
-                    Err(e) => warn!("{e}"),
-                }
-            }
-        }
-    });
-
-    Ok(())
 }
