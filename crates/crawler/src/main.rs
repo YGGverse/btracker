@@ -6,7 +6,7 @@ mod tracker;
 use anyhow::Result;
 use btpeer::http::query::Scrape;
 use btracker_fs::crawler::Storage;
-use chrono::Local;
+use chrono::{Local, Utc};
 use clap::Parser;
 use config::Config;
 use full_scrape::FullScrape;
@@ -20,7 +20,7 @@ use regex::Regex;
 use std::{
     collections::{HashMap, HashSet},
     num::NonZero,
-    sync::Arc,
+    sync::{Arc, atomic::Ordering},
     time::Duration,
 };
 use tokio::{sync::RwLock, time};
@@ -98,8 +98,10 @@ async fn main() -> Result<()> {
         })
     }
 
+    // init virtual I2P / SAM sockets index
+    let i2p_peers_map = Arc::new(RwLock::new(HashMap::new()));
+    // init I2P trackers, if exists
     if let Some(a) = config.tracker.announce_i2p {
-        let peers_map = Arc::new(RwLock::new(HashMap::new()));
         use yosemite::{Session, SessionOptions};
         for i in a {
             if !i.url.scheme().starts_with("http") {
@@ -121,7 +123,7 @@ async fn main() -> Result<()> {
                     })
                     .await?,
                 )),
-                peers_map: peers_map.clone(),
+                peers_map: i2p_peers_map.clone(),
             })
         }
     }
@@ -136,6 +138,22 @@ async fn main() -> Result<()> {
     loop {
         let time_queue = Local::now();
         debug!("queue crawl begin at {time_queue}...");
+
+        // Cleanup inactive I2P sessions if exists
+        i2p_peers_map.write().await.retain(|b32, s| {
+            if (Utc::now().timestamp() as u64).saturating_sub(s.last_active.load(Ordering::Relaxed))
+                > config.timeout.cleanup_inactive_i2p_session_seconds
+            {
+                debug!(
+                    "[tracker] I2P session `{b32}` is inactive; aborting handler on `{}`",
+                    s.socket
+                );
+                s.handler.abort();
+                false
+            } else {
+                true
+            }
+        });
 
         // Please, note:
         // * it's important to start new `Session` inside the crawler loop:
@@ -166,6 +184,7 @@ async fn main() -> Result<()> {
             },
         )
         .await?;
+
         // build unique ID index from the multiple info-hash sources
         let queue = full_scrape.get(config.info_hash_capacity).await?;
         // clean up nonexistent ban entries from the memory pool
@@ -179,12 +198,14 @@ async fn main() -> Result<()> {
             }
             is_retain
         });
-        // handle
+
         debug!(
             "fetched {} unique hashes, banned: {}.",
             queue.len(),
             ban.len()
         );
+
+        // handle
         for i in queue {
             // convert to string once
             let h = i.as_string();

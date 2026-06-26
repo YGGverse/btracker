@@ -1,11 +1,15 @@
 use anyhow::Result;
 use btpeer::Peer;
+use chrono::Utc;
 use librqbit::dht::Id20;
 use log::*;
 use std::{
     collections::{HashMap, HashSet},
     net::{IpAddr, SocketAddr},
-    sync::Arc,
+    sync::{
+        Arc,
+        atomic::{AtomicU64, Ordering},
+    },
     time::Duration,
 };
 use tokio::sync::RwLock;
@@ -23,12 +27,12 @@ pub enum Tracker {
     I2p {
         loopback: IpAddr,
         peers_limit: Option<usize>,
+        peers_map: Arc<RwLock<HashMap<String, I2pSession>>>,
         port: u16,
         proxy: Option<Url>,
+        sam_session: Arc<RwLock<Session<Stream>>>,
         timeout: Duration,
         url: Url,
-        sam_session: Arc<RwLock<Session<Stream>>>,
-        peers_map: Arc<RwLock<HashMap<String, SocketAddr>>>,
     },
 }
 
@@ -87,12 +91,12 @@ impl Tracker {
             Self::I2p {
                 loopback,
                 peers_limit,
+                peers_map,
                 port,
                 proxy,
                 sam_session,
                 timeout,
                 url,
-                peers_map,
             } => {
                 let announce =
                     btpeer::http::query::Announce::new(url.as_str(), &info_hash.0, *port)?;
@@ -117,16 +121,24 @@ impl Tracker {
                     *peers_limit,
                 );
 
-                let mut m = peers_map.write().await; // prevents infinitive socket spawn
-                let mut b = HashSet::with_capacity(peers.len());
+                let mut m = peers_map.write().await; // prevents infinitive async socket spawn
+                let mut b = HashSet::with_capacity(peers.len()); // resulting peers buffer
 
                 for p in peers {
                     match p {
                         Peer::I2p(peer) => {
-                            if let Some(&p) = m.get(&peer.b32) {
-                                if b.insert(p) {
-                                    debug!("[tracker] reuse existing I2P peer `{peer}` as `{p}`");
+                            if let Some(i2p_session) = m.get(&peer.b32) {
+                                i2p_session
+                                    .last_active
+                                    .store(Utc::now().timestamp() as u64, Ordering::Relaxed);
+
+                                if b.insert(i2p_session.socket) {
+                                    debug!(
+                                        "[tracker] reuse existing I2P peer `{peer}` as `{}`",
+                                        i2p_session.socket
+                                    );
                                 }
+
                                 continue;
                             }
 
@@ -136,46 +148,55 @@ impl Tracker {
                                 tokio::net::TcpListener::bind(SocketAddr::new(*loopback, 0))
                                     .await?;
 
-                            let p = listener.local_addr()?;
+                            let socket = listener.local_addr()?;
 
-                            m.insert(peer.b32.clone(), p);
-
-                            if b.insert(p) {
-                                debug!("[tracker] bind I2P peer `{peer}` as `{p}`")
+                            if b.insert(socket) {
+                                debug!("[tracker] bind I2P peer `{peer}` as `{socket}`")
                             } else {
-                                debug!("[tracker] bind existing I2P peer `{peer}` as `{p}`")
+                                debug!("[tracker] bind existing I2P peer `{peer}` as `{socket}`")
                             }
 
                             debug!(
-                                "[tracker] listening incoming connections for `{peer}` on `{p}` as `{b32}`...",
+                                "[tracker] listening incoming connections for `{peer}` on `{socket}` as `{b32}`...",
                             );
 
                             let session = sam_session.clone();
-                            tokio::spawn(async move {
+                            let peer_b32 = peer.b32.clone();
+                            let handler = tokio::spawn(async move {
                                 while let Ok((mut local, client)) = listener.accept().await {
                                     debug!(
-                                        "[tracker] accepting SAM connection from {client} ({})",
-                                        &peer.b32
+                                        "[tracker] accepting SAM connection from {client} ({peer_b32})"
                                     );
                                     if let Ok(mut remote) =
-                                        session.write().await.connect(&peer.b32).await
+                                        session.write().await.connect(&peer_b32).await
                                     {
                                         debug!(
                                             "[tracker] begin SAM connection to `{}`",
-                                            remote.remote_destination() // | &peer.b32
+                                            remote.remote_destination() // | &peer_b32
                                         );
                                         match tokio::io::copy_bidirectional(&mut local, &mut remote)
                                             .await
                                         {
                                             Ok((a, b)) => trace!(
                                                 "[tracker] copied {a}/{b} to `{}`",
-                                                remote.remote_destination() // | &peer.b32
+                                                remote.remote_destination() // | &peer_b32
                                             ),
                                             Err(e) => warn!("{e}"),
                                         }
                                     }
                                 }
                             });
+                            assert!(
+                                m.insert(
+                                    peer.b32,
+                                    I2pSession {
+                                        socket,
+                                        handler,
+                                        last_active: AtomicU64::new(Utc::now().timestamp() as u64),
+                                    },
+                                )
+                                .is_none()
+                            )
                         }
                         Peer::Default(peer) => {
                             warn!(
@@ -195,6 +216,12 @@ impl Tracker {
             Self::I2p { url, .. } => url,
         }
     }
+}
+
+pub struct I2pSession {
+    pub handler: tokio::task::JoinHandle<()>,
+    pub last_active: AtomicU64,
+    pub socket: SocketAddr,
 }
 
 pub struct Buffer(pub Vec<Tracker>);
