@@ -132,13 +132,11 @@ impl Tracker {
                                     .last_active
                                     .store(Utc::now().timestamp() as u64, Ordering::Relaxed);
 
-                                if b.insert(i2p_session.socket) {
-                                    debug!(
-                                        "[tracker] reuse existing I2P peer `{peer}` as `{}`",
-                                        i2p_session.socket
-                                    );
-                                }
-
+                                b.insert(i2p_session.socket);
+                                debug!(
+                                    "[tracker] reuse existing I2P peer `{peer}` as `{}`",
+                                    i2p_session.socket
+                                );
                                 continue;
                             }
 
