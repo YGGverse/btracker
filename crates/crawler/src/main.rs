@@ -148,7 +148,7 @@ async fn main() -> Result<()> {
                 > config.timeout.cleanup_inactive_i2p_session_seconds
             {
                 debug!(
-                    "[tracker] I2P session `{b32}` is inactive; aborting handler on `{}`",
+                    "I2P session `{b32}` is inactive; aborting handler on `{}`",
                     s.socket
                 );
                 s.handler.abort();
