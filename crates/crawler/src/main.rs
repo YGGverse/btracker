@@ -63,7 +63,10 @@ async fn main() -> Result<()> {
         if !i.url.scheme().starts_with("http") {
             todo!("HTTP trackers only!")
         }
-        info!("init full-scrape source `{}`", i.url);
+        info!(
+            "init full-scrape source `{}`, proxy: {:?}",
+            i.url, i.proxy_url
+        );
         scrape.push(FullScrape {
             proxy: i.proxy_url,
             query: Scrape::new(i.url.as_str(), None)?,
@@ -88,7 +91,7 @@ async fn main() -> Result<()> {
         if !i.url.scheme().starts_with("http") {
             todo!("HTTP trackers only!")
         }
-        info!("init tracker `{}`", i.url);
+        info!("init tracker `{}`, proxy: {:?}", i.url, i.proxy_url);
         trackers.push(Tracker::Default {
             proxy: i.proxy_url,
             timeout: Duration::from_secs(i.timeout),
@@ -107,7 +110,7 @@ async fn main() -> Result<()> {
             if !i.url.scheme().starts_with("http") {
                 todo!("HTTP trackers only!")
             }
-            info!("init I2P tracker `{}`", i.url);
+            info!("init I2P tracker `{}`, proxy: {:?}", i.url, i.proxy_url);
             trackers.push(Tracker::I2p {
                 loopback: i.loopback_host,
                 proxy: i.proxy_url,
