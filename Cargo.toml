@@ -18,7 +18,7 @@ default-members = [
 
 [patch.crates-io]
 #btracker-fs = { git = "https://github.com/yggverse/btracker.git", package = "btracker-fs" }
-btracker-fs = { path = "crates/fs" }
+#btracker-fs = { path = "crates/fs" }
 btracker-scrape = { path = "crates/scrape" }
 
 #librqbit = { git = "https://github.com/ikatson/rqbit.git", rev="ba07a75c9ad3bbb5e1d8aa8dee815ce8820fe372", package = "librqbit" }
