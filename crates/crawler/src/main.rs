@@ -101,8 +101,8 @@ async fn main() -> Result<()> {
         })
     }
 
-    // init virtual I2P / SAM sockets index
-    let i2p_peers_map = Arc::new(RwLock::new(HashMap::new()));
+    // init virtual sockets index for  I2P / SAM
+    let virtual_peers = Arc::new(RwLock::new(HashMap::new()));
     // init I2P trackers, if exists
     if let Some(a) = config.tracker.announce_i2p {
         use yosemite::{Session, SessionOptions};
@@ -126,7 +126,7 @@ async fn main() -> Result<()> {
                     })
                     .await?,
                 )),
-                peers_map: i2p_peers_map.clone(),
+                peers_map: virtual_peers.clone(),
             })
         }
     }
@@ -137,13 +137,13 @@ async fn main() -> Result<()> {
     let mut ban = HashSet::with_capacity(config.info_hash_capacity);
 
     // start the crawler
-    info!("crawler started at {time_init}");
+    info!("crawler started");
     loop {
         let time_queue = Local::now();
-        debug!("queue crawl begin at {time_queue}...");
+        debug!("queue crawl begin...");
 
         // Cleanup inactive I2P sessions if exists
-        i2p_peers_map.write().await.retain(|b32, s| {
+        virtual_peers.write().await.retain(|b32, s| {
             if (Utc::now().timestamp() as u64).saturating_sub(s.last_active.load(Ordering::Relaxed))
                 > config.timeout.cleanup_inactive_i2p_session_seconds
             {
