@@ -17,7 +17,12 @@ use librqbit::{
 use log::*;
 use opt::Opt;
 use regex::Regex;
-use std::{collections::HashSet, num::NonZero, sync::Arc, time::Duration};
+use std::{
+    collections::{HashMap, HashSet},
+    num::NonZero,
+    sync::Arc,
+    time::Duration,
+};
 use tokio::{sync::RwLock, time};
 use tracker::Tracker;
 
@@ -94,6 +99,7 @@ async fn main() -> Result<()> {
     }
 
     if let Some(a) = config.tracker.announce_i2p {
+        let peers_map = Arc::new(RwLock::new(HashMap::new()));
         use yosemite::{Session, SessionOptions};
         for i in a {
             if !i.url.scheme().starts_with("http") {
@@ -107,7 +113,7 @@ async fn main() -> Result<()> {
                 url: i.url,
                 port: i.port,
                 peers_limit: i.peers_limit,
-                sam: Arc::new(RwLock::new(
+                sam_session: Arc::new(RwLock::new(
                     Session::new(SessionOptions {
                         inbound_len: i.inbound_len,
                         outbound_len: i.outbound_len,
@@ -115,6 +121,7 @@ async fn main() -> Result<()> {
                     })
                     .await?,
                 )),
+                peers_map: peers_map.clone(),
             })
         }
     }

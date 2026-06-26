@@ -3,7 +3,7 @@ use btpeer::Peer;
 use librqbit::dht::Id20;
 use log::*;
 use std::{
-    collections::HashSet,
+    collections::{HashMap, HashSet},
     net::{IpAddr, SocketAddr},
     sync::Arc,
     time::Duration,
@@ -27,16 +27,13 @@ pub enum Tracker {
         proxy: Option<Url>,
         timeout: Duration,
         url: Url,
-        sam: Arc<RwLock<Session<Stream>>>,
+        sam_session: Arc<RwLock<Session<Stream>>>,
+        peers_map: Arc<RwLock<HashMap<String, SocketAddr>>>,
     },
 }
 
 impl Tracker {
-    async fn peers(
-        &self,
-        info_hash: &Id20,
-        peers_b32: &mut HashSet<String>,
-    ) -> Result<HashSet<SocketAddr>> {
+    async fn peers(&self, info_hash: &Id20) -> Result<HashSet<SocketAddr>> {
         Ok(match self {
             Self::Default {
                 peers_limit,
@@ -92,14 +89,15 @@ impl Tracker {
                 peers_limit,
                 port,
                 proxy,
-                sam,
+                sam_session,
                 timeout,
                 url,
+                peers_map,
             } => {
                 let announce =
                     btpeer::http::query::Announce::new(url.as_str(), &info_hash.0, *port)?;
 
-                let b32 = b32(sam.read().await.destination().as_bytes());
+                let b32 = b32(sam_session.read().await.destination().as_bytes());
 
                 let peers = take_random_peers(
                     btpeer::http::announce_i2p(
@@ -119,16 +117,16 @@ impl Tracker {
                     *peers_limit,
                 );
 
+                let mut m = peers_map.write().await; // prevents infinitive socket spawn
                 let mut b = HashSet::with_capacity(peers.len());
 
                 for p in peers {
                     match p {
                         Peer::I2p(peer) => {
-                            if !peers_b32.insert(peer.b32.clone()) {
-                                debug!(
-                                    "[tracker] b32 value `{}` for peer `{peer}` on `{loopback}` exists, skip.",
-                                    &peer.b32
-                                );
+                            if let Some(&p) = m.get(&peer.b32) {
+                                if b.insert(p) {
+                                    debug!("[tracker] reuse existing I2P peer `{peer}` as `{p}`");
+                                }
                                 continue;
                             }
 
@@ -140,6 +138,8 @@ impl Tracker {
 
                             let p = listener.local_addr()?;
 
+                            m.insert(peer.b32.clone(), p);
+
                             if b.insert(p) {
                                 debug!("[tracker] bind I2P peer `{peer}` as `{p}`")
                             } else {
@@ -150,7 +150,7 @@ impl Tracker {
                                 "[tracker] listening incoming connections for `{peer}` on `{p}` as `{b32}`...",
                             );
 
-                            let session = sam.clone();
+                            let session = sam_session.clone();
                             tokio::spawn(async move {
                                 while let Ok((mut local, client)) = listener.accept().await {
                                     debug!(
@@ -202,7 +202,6 @@ pub struct Buffer(pub Vec<Tracker>);
 impl Buffer {
     /// Return peers from trackers
     pub async fn peers(&self, info_hash: &Id20) -> Result<HashSet<SocketAddr>> {
-        let mut peers_b32 = HashSet::new(); // make sure I2P peers collected are unique as bind on different SocketAddr
         let mut peers = HashSet::new(); // unique peers buffer collected from all trackers
 
         for tracker in self.0.iter() {
@@ -211,7 +210,7 @@ impl Buffer {
                 tracker.url(),
                 info_hash.as_string(),
             );
-            peers.extend(tracker.peers(info_hash, &mut peers_b32).await?)
+            peers.extend(tracker.peers(info_hash).await?)
         }
 
         Ok(peers)
