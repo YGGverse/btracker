@@ -161,17 +161,15 @@ impl Tracker {
                                         session.write().await.connect(&peer.b32).await
                                     {
                                         debug!(
-                                            "[tracker] begin SAM connection to `{}` ({})",
-                                            remote.remote_destination(),
-                                            &peer.b32
+                                            "[tracker] begin SAM connection to `{}`",
+                                            remote.remote_destination() // | &peer.b32
                                         );
                                         match tokio::io::copy_bidirectional(&mut local, &mut remote)
                                             .await
                                         {
                                             Ok((a, b)) => trace!(
-                                                "[tracker] copied {a}/{b} to `{}` ({})",
-                                                remote.remote_destination(),
-                                                &peer.b32
+                                                "[tracker] copied {a}/{b} to `{}`",
+                                                remote.remote_destination() // | &peer.b32
                                             ),
                                             Err(e) => warn!("{e}"),
                                         }
