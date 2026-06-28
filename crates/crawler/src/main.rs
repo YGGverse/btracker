@@ -114,7 +114,10 @@ async fn main() -> Result<()> {
             trackers.push(Tracker::I2p {
                 loopback: i.loopback_host,
                 proxy: i.proxy_url,
-                timeout: Duration::from_secs(i.timeout),
+                announce_timeout: Duration::from_secs(i.timeout),
+                peer_connect_timeout: Duration::from_secs(
+                    config.timeout.i2p_peer_connect_timeout_seconds,
+                ),
                 url: i.url,
                 port: i.port,
                 peers_limit: i.peers_limit,

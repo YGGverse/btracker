@@ -25,13 +25,14 @@ pub enum Tracker {
         url: Url,
     },
     I2p {
+        announce_timeout: Duration,
         loopback: IpAddr,
+        peer_connect_timeout: Duration,
         peers_limit: Option<usize>,
         peers_map: Arc<RwLock<HashMap<String, I2pSession>>>,
         port: u16,
         proxy: Option<Url>,
         sam_session: Arc<RwLock<Session<Stream>>>,
-        timeout: Duration,
         url: Url,
     },
 }
@@ -89,13 +90,14 @@ impl Tracker {
                 b
             }
             Self::I2p {
+                announce_timeout,
                 loopback,
+                peer_connect_timeout,
                 peers_limit,
                 peers_map,
                 port,
                 proxy,
                 sam_session,
-                timeout,
                 url,
             } => {
                 let announce =
@@ -106,7 +108,7 @@ impl Tracker {
                 let peers = take_random_peers(
                     btpeer::http::announce_i2p(
                         &announce,
-                        *timeout,
+                        *announce_timeout,
                         proxy.as_ref().map(|u| u.as_str()),
                     )
                     .await?
@@ -158,6 +160,7 @@ impl Tracker {
                                 "[tracker] listening incoming connections for `{peer}` on `{socket}` as `{b32}`...",
                             );
 
+                            let timeout = *peer_connect_timeout;
                             let session = sam_session.clone();
                             let peer_b32 = peer.b32.clone();
                             let handler = tokio::spawn(async move {
@@ -165,22 +168,39 @@ impl Tracker {
                                     debug!(
                                         "[tracker] accepting SAM connection from {client} ({peer_b32})"
                                     );
-                                    if let Ok(mut remote) =
-                                        session.write().await.connect(&peer_b32).await
+                                    match tokio::time::timeout(
+                                        timeout,
+                                        session.write().await.connect(&peer_b32),
+                                    )
+                                    .await
                                     {
-                                        debug!(
-                                            "[tracker] begin SAM connection to `{}`",
-                                            remote.remote_destination() // | &peer_b32
-                                        );
-                                        match tokio::io::copy_bidirectional(&mut local, &mut remote)
-                                            .await
-                                        {
-                                            Ok((a, b)) => trace!(
-                                                "[tracker] copied {a}/{b} to `{}`",
-                                                remote.remote_destination() // | &peer_b32
+                                        Ok(connection) => match connection {
+                                            Ok(mut remote) => {
+                                                debug!(
+                                                    "[tracker] begin SAM connection to `{}`",
+                                                    remote.remote_destination() // | &peer_b32
+                                                );
+                                                match tokio::io::copy_bidirectional(
+                                                    &mut local,
+                                                    &mut remote,
+                                                )
+                                                .await // @TODO timeout?
+                                                {
+                                                    Ok((a, b)) => trace!(
+                                                        "[tracker] copied {a}/{b} to `{}`",
+                                                        remote.remote_destination() // | &peer_b32
+                                                    ),
+                                                    Err(e) => debug!("{e}"),
+                                                }
+                                            }
+                                            Err(e) => debug!(
+                                                "[tracker] connection failed to {client} ({peer_b32}): {e}"
                                             ),
-                                            Err(e) => warn!("{e}"),
-                                        }
+                                        },
+                                        Err(e) => debug!(
+                                            "[tracker] connection to {client} ({peer_b32}) timed out after {} seconds: {e}",
+                                            timeout.as_secs()
+                                        ),
                                     }
                                 }
                             });
