@@ -64,7 +64,7 @@ async fn main() -> Result<()> {
             todo!("HTTP trackers only!")
         }
         info!(
-            "init full-scrape source `{}`, proxy: {:?}",
+            "init full-scrape source {}, proxy: {:?}",
             i.url, i.proxy_url
         );
         scrape.push(FullScrape {
@@ -91,7 +91,7 @@ async fn main() -> Result<()> {
         if !i.url.scheme().starts_with("http") {
             todo!("HTTP trackers only!")
         }
-        info!("init tracker `{}`, proxy: {:?}", i.url, i.proxy_url);
+        info!("init tracker {}, proxy: {:?}", i.url, i.proxy_url);
         trackers.push(Tracker::Default {
             proxy: i.proxy_url,
             timeout: Duration::from_secs(i.timeout),
@@ -110,7 +110,7 @@ async fn main() -> Result<()> {
             if !i.url.scheme().starts_with("http") {
                 todo!("HTTP trackers only!")
             }
-            info!("init I2P tracker `{}`, proxy: {:?}", i.url, i.proxy_url);
+            info!("init I2P tracker {}, proxy: {:?}", i.url, i.proxy_url);
             trackers.push(Tracker::I2p {
                 loopback: i.loopback_host,
                 proxy: i.proxy_url,
@@ -151,7 +151,7 @@ async fn main() -> Result<()> {
                 > config.timeout.cleanup_inactive_i2p_session_seconds
             {
                 debug!(
-                    "I2P session `{b32}` is inactive; aborting handler on `{}`",
+                    "I2P session {b32} is inactive; aborting handler on {}",
                     s.socket
                 );
                 s.handler.abort();
@@ -198,7 +198,7 @@ async fn main() -> Result<()> {
             let is_retain = queue.contains(i);
             if !is_retain {
                 debug!(
-                    "remove `{}` from the ban list, as it is no longer available in the source.",
+                    "remove {} from the ban list, as it is no longer available in the source.",
                     i.as_string()
                 )
             }
@@ -216,17 +216,17 @@ async fn main() -> Result<()> {
             // convert to string once
             let h = i.as_string();
             if preload.contains_torrent(&h)? {
-                debug!("torrent `{h}` exists, skip.");
+                debug!("torrent {h} exists, skip.");
                 continue;
             }
 
             // skip banned entry, remove it from the ban list to retry on the next iteration
             if ban.remove(&i) {
-                debug!("torrent `{h}` is banned, skip.");
+                debug!("torrent {h} is banned, skip.");
                 continue;
             }
 
-            debug!("resolve `{h}`...");
+            debug!("resolve {h}...");
 
             // discover unique peers first
             let initial_peers = match tracker.peers(&i).await {
@@ -236,16 +236,16 @@ async fn main() -> Result<()> {
                         peers.extend(p);
                     }
                     if peers.is_empty() {
-                        debug!("could not find peers for torrent `{h}`, skip.");
+                        debug!("could not find peers for torrent {h}, skip.");
                         continue;
                     } else {
                         let l = peers.len();
-                        debug!("collected {l} peers for torrent `{h}`.");
+                        debug!("collected {l} peers for torrent {h}.");
                         peers
                     }
                 }
                 Err(e) => {
-                    warn!("could not get peers for torrent `{h}`: {e}, skip.");
+                    warn!("could not get peers for torrent {h}: {e}, skip.");
                     continue;
                 }
             };
@@ -277,9 +277,9 @@ async fn main() -> Result<()> {
                 Ok(r) => match r {
                     Ok(AddTorrentResponse::ListOnly(l)) => {
                         assert!(preload.regex.is_none());
-                        debug!("persist bytes for torrent file `{h}`...");
+                        debug!("persist bytes for torrent file {h}...");
                         preload.commit(&h, l.torrent_bytes.to_vec(), None)?;
-                        info!("torrent `{h}` resolved.")
+                        info!("torrent {h} resolved.")
                     }
                     Ok(AddTorrentResponse::Added(_, mt)) => {
                         assert!(preload.regex.is_some());
@@ -298,7 +298,7 @@ async fn main() -> Result<()> {
                                         .is_some_and(|limit| only_files.len() + 1 > limit)
                                     {
                                         debug!(
-                                            "file count limit ({}) reached, skip file `{id}` for `{h}` at `{}` (and other files after it)",
+                                            "file count limit ({}) reached, skip file {id} for {h} at {} (and other files after it)",
                                             only_files.len(),
                                             info.relative_filename.to_string_lossy()
                                         );
@@ -306,7 +306,7 @@ async fn main() -> Result<()> {
                                     }
                                     if preload.max_filesize.is_some_and(|limit| info.len > limit) {
                                         debug!(
-                                            "file size ({}) limit reached, skip file `{id}` for `{h}` at `{}`",
+                                            "file size ({}) limit reached, skip file {id} for {h} at {}",
                                             info.len,
                                             info.relative_filename.to_string_lossy()
                                         );
@@ -315,12 +315,12 @@ async fn main() -> Result<()> {
                                     if preload.regex.as_ref().is_some_and(|r| {
                                         !r.is_match(&info.relative_filename.to_string_lossy())
                                     }) {
-                                        debug!("regex filter match: skip `{id}` for `{h}` at `{}`",
+                                        debug!("regex filter match: skip {id} for {h} at {}",
                                         info.relative_filename.to_string_lossy());
                                         continue;
                                     }
                                     debug!(
-                                        "keep file `{id}` for `{h}` as `{}`",
+                                        "keep file {id} for {h} as {}",
                                         info.relative_filename.to_string_lossy()
                                     );
                                     assert!(keep_files.insert(info.relative_filename.clone()));
@@ -330,7 +330,7 @@ async fn main() -> Result<()> {
                             })?;
                         session.update_only_files(&mt, &only_files).await?;
                         session.unpause(&mt).await?;
-                        debug!("begin torrent `{h}` preload...");
+                        debug!("begin torrent {h} preload...");
                         if let Err(e) = time::timeout(
                             Duration::from_secs(config.timeout.torrent_preload_seconds),
                             mt.wait_until_completed(),
@@ -338,27 +338,27 @@ async fn main() -> Result<()> {
                         .await
                         {
                             debug!(
-                                "preload torrent data for `{h}` failed (`{e}`), ban temporarily.",
+                                "preload torrent data for {h} failed ({e}), ban temporarily.",
                             );
                             assert!(ban.insert(i));
                             continue;
                         }
-                        debug!("torrent `{h}` preload completed.");
+                        debug!("torrent {h} preload completed.");
                         // persist torrent bytes and preloaded content,
                         // cleanup tmp (see rqbit#408)
-                        debug!("persist torrent `{h}` with `{}` files...", keep_files.len());
+                        debug!("persist torrent {h} with {} files...", keep_files.len());
                         preload.commit(&h, bytes, Some(keep_files))?;
-                        info!("torrent `{h}` resolved.")
+                        info!("torrent {h} resolved.")
                     }
                     Ok(_) => unreachable!(),
                     Err(e) => {
-                        debug!("failed to resolve torrent `{h}`: `{e}`, ban temporarily.");
+                        debug!("failed to resolve torrent {h}: {e}, ban temporarily.");
                         assert!(ban.insert(i))
                     }
                 },
                 Err(e) => {
                     debug!(
-                        "skip awaiting the completion of adding torrent `{h}` (`{e}`), ban temporarily."
+                        "skip awaiting the completion of adding torrent {h} ({e}), ban temporarily."
                     );
                     assert!(ban.insert(i))
                 }
