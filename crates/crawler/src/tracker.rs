@@ -75,14 +75,14 @@ impl Tracker {
                         Peer::Default(peer) => {
                             let p = SocketAddr::new(peer.host, peer.port);
                             if b.insert(p) {
-                                debug!("[tracker] add peer: `{p}`")
+                                debug!("[tracker] add peer: {p}")
                             } else {
-                                debug!("[tracker] replace existing peer: `{p}`")
+                                debug!("[tracker] replace existing peer: {p}")
                             }
                         }
                         Peer::I2p(peer) => {
                             unreachable!(
-                                "[tracker] unexpected peer `{peer}` from tracker `{url}`, skip"
+                                "[tracker] unexpected peer {peer} from tracker {url}, skip"
                             )
                         }
                     }
@@ -136,13 +136,13 @@ impl Tracker {
 
                                 b.insert(i2p_session.socket);
                                 debug!(
-                                    "[tracker] reuse existing I2P peer `{peer}` as `{}`",
+                                    "[tracker] reuse existing I2P peer {peer} as {}",
                                     i2p_session.socket
                                 );
                                 continue;
                             }
 
-                            debug!("[tracker] init SAM proxy for `{peer}` on `{loopback}`...");
+                            debug!("[tracker] init SAM proxy for {peer} on {loopback}...");
 
                             let listener =
                                 tokio::net::TcpListener::bind(SocketAddr::new(*loopback, 0))
@@ -151,13 +151,13 @@ impl Tracker {
                             let socket = listener.local_addr()?;
 
                             if b.insert(socket) {
-                                debug!("[tracker] bind I2P peer `{peer}` as `{socket}`")
+                                debug!("[tracker] bind I2P peer {peer} as {socket}")
                             } else {
-                                debug!("[tracker] bind existing I2P peer `{peer}` as `{socket}`")
+                                debug!("[tracker] bind existing I2P peer {peer} as {socket}")
                             }
 
                             debug!(
-                                "[tracker] listening incoming connections for `{peer}` on `{socket}` as `{b32}`...",
+                                "[tracker] listening incoming connections for {peer} on {socket} as {b32}...",
                             );
 
                             let timeout = *peer_connect_timeout;
@@ -177,7 +177,7 @@ impl Tracker {
                                         Ok(connection) => match connection {
                                             Ok(mut remote) => {
                                                 debug!(
-                                                    "[tracker] begin SAM connection to `{}`",
+                                                    "[tracker] begin SAM connection to {}",
                                                     remote.remote_destination() // | &peer_b32
                                                 );
                                                 match tokio::io::copy_bidirectional(
@@ -187,7 +187,7 @@ impl Tracker {
                                                 .await // @TODO timeout?
                                                 {
                                                     Ok((a, b)) => trace!(
-                                                        "[tracker] copied {a}/{b} to `{}`",
+                                                        "[tracker] copied {a}/{b} to {}",
                                                         remote.remote_destination() // | &peer_b32
                                                     ),
                                                     Err(e) => debug!("{e}"),
@@ -217,9 +217,7 @@ impl Tracker {
                             )
                         }
                         Peer::Default(peer) => {
-                            warn!(
-                                "[tracker] unexpected peer `{peer}` from I2P tracker `{url}`, skip"
-                            )
+                            warn!("[tracker] unexpected peer {peer} from I2P tracker {url}, skip")
                         }
                     }
                 }
@@ -251,7 +249,7 @@ impl Buffer {
 
         for tracker in self.0.iter() {
             debug!(
-                "[tracker] get peers from `{}` for `{}`...",
+                "[tracker] get peers from {} for {}...",
                 tracker.url(),
                 info_hash.as_string(),
             );
