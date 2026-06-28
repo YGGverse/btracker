@@ -337,9 +337,7 @@ async fn main() -> Result<()> {
                         )
                         .await
                         {
-                            debug!(
-                                "preload torrent data for {h} failed ({e}), ban temporarily.",
-                            );
+                            debug!("preload torrent data for {h} failed ({e}), ban temporarily.");
                             assert!(ban.insert(i));
                             continue;
                         }
