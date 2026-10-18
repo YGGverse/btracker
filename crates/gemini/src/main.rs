@@ -8,20 +8,20 @@ use btracker_scrape::Buffer as Scrape;
 use config::Config;
 use librqbit_core::torrent_metainfo::{TorrentMetaV1Owned, torrent_from_bytes};
 use log::*;
-use native_tls::{HandshakeError, Identity, TlsAcceptor, TlsStream};
-use std::{
-    collections::HashMap,
-    fs::File,
-    io::{Read, Write},
-    net::{SocketAddr, TcpListener, TcpStream},
-    path::PathBuf,
-    sync::Arc,
-    thread,
+use rustls::{
+    ServerConfig,
+    pki_types::{CertificateDer, PrivateKeyDer},
 };
-use tokio::sync::RwLock;
+use std::{collections::HashMap, fs::File, io::Read, net::SocketAddr, path::PathBuf, sync::Arc};
+use tokio::{
+    io::{AsyncReadExt, AsyncWriteExt},
+    net::{TcpListener, TcpStream},
+    sync::RwLock,
+};
+use tokio_rustls::{TlsAcceptor, server::TlsStream};
 
 #[tokio::main]
-async fn main() -> Result<()> {
+async fn main() -> std::io::Result<()> {
     use chrono::Local;
     use clap::Parser;
 
@@ -55,40 +55,91 @@ async fn main() -> Result<()> {
         tracker: config.tracker,
     });
 
-    // https://geminiprotocol.net/docs/protocol-specification.gmi#the-use-of-tls
-    let acceptor = TlsAcceptor::new(Identity::from_pkcs12(
-        &{
-            let mut buffer = vec![];
-            File::open(&config.identity)?.read_to_end(&mut buffer)?;
-            buffer
-        },
-        &config.password,
-    )?)?;
+    let mut buffer = vec![];
+    File::open(&config.identity)?.read_to_end(&mut buffer)?;
 
-    let listener = TcpListener::bind(config.bind)?;
+    let keystore = p12_keystore::KeyStore::from_pkcs12(
+        &buffer,
+        &config.password,
+        p12_keystore::Pkcs12ImportPolicy::Strict,
+    )
+    .map_err(|e| {
+        std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            format!("PKCS12/PFX decryption failed: {e:?}"),
+        )
+    })?;
+
+    let (_, chain) = keystore.private_key_chain().ok_or_else(|| {
+        std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            "No private key chain found in PFX",
+        )
+    })?;
+
+    let cert_chain: Vec<CertificateDer<'static>> = chain
+        .certs()
+        .iter()
+        .map(|cert| CertificateDer::from(cert.as_der().to_vec()))
+        .collect();
+
+    if cert_chain.is_empty() {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            "No certificates found in PFX",
+        ));
+    }
+
+    let private_key = PrivateKeyDer::try_from(chain.key().as_der().to_vec()).map_err(|e| {
+        std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            format!("Invalid private key format: {e:?}"),
+        )
+    })?;
+
+    let server_config = ServerConfig::builder_with_provider(Arc::new(
+        rustls::crypto::aws_lc_rs::default_provider(),
+    ))
+    .with_safe_default_protocol_versions()
+    .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?
+    .with_no_client_auth()
+    .with_single_cert(cert_chain, private_key)
+    .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
+
+    let acceptor = TlsAcceptor::from(Arc::new(server_config));
+    let listener = TcpListener::bind(&config.bind).await?;
 
     info!("Server started on `{}`", config.bind);
 
-    for stream in listener.incoming() {
-        match stream {
-            Ok(stream) => {
-                thread::spawn({
-                    let state = state.clone();
-                    let peer = stream.peer_addr()?;
-                    let connection = acceptor.accept(stream);
-                    move || handle(state, peer, connection)
-                });
+    loop {
+        let (stream, peer) = match listener.accept().await {
+            Ok(res) => res,
+            Err(e) => {
+                error!("Accept error: {e}");
+                continue;
             }
-            Err(e) => error!("{e}"),
-        }
+        };
+
+        let state = state.clone();
+        let acceptor = acceptor.clone();
+
+        tokio::spawn(async move {
+            let tls_stream = match acceptor.accept(stream).await {
+                Ok(s) => s,
+                Err(e) => {
+                    error!("TLS handshake failed for {peer}: {e}");
+                    return;
+                }
+            };
+            handle(state, peer, Ok(tls_stream)).await;
+        });
     }
-    Ok(())
 }
 
 async fn handle(
     state: Arc<State>,
     peer: SocketAddr,
-    connection: Result<TlsStream<TcpStream>, HandshakeError<TcpStream>>,
+    connection: Result<TlsStream<TcpStream>, std::io::Error>,
 ) {
     use titanite::*;
     debug!("Incoming connection from: `{peer}`");
@@ -100,8 +151,12 @@ async fn handle(
             let mut header_buffer = Vec::with_capacity(HEADER_MAX_LEN);
             loop {
                 let mut header_chunk = vec![0];
-                match stream.read(&mut header_chunk) {
-                    Ok(0) => warn!("Peer `{peer}` closed connection."),
+
+                match stream.read(&mut header_chunk).await {
+                    Ok(0) => {
+                        warn!("Peer `{peer}` closed connection.");
+                        break;
+                    }
                     Ok(l) => {
                         // validate header buffer, break on its length reached protocol limits
                         if header_buffer.len() + l > HEADER_MAX_LEN {
@@ -115,7 +170,8 @@ async fn handle(
                                     Ok(()) => warn!("Bad request from peer `{peer}`"),
                                     Err(e) => error!("Send packet to peer `{peer}` failed: {e}"),
                                 },
-                            );
+                            )
+                            .await;
                         }
 
                         // take chunk bytes at this point
@@ -130,7 +186,7 @@ async fn handle(
 
                             // header bytes received but yet could not be parsed,
                             // complete with request failure
-                            send(
+                            return send(
                                 &response::failure::permanent::BadRequest {
                                     message: Some("Bad request".to_string()),
                                 }
@@ -141,19 +197,23 @@ async fn handle(
                                     Err(e) => error!("Send packet to peer `{peer}` failed: {e}"),
                                 },
                             )
+                            .await;
                         }
                     }
-                    Err(e) => send(
-                        &response::failure::permanent::BadRequest {
-                            message: Some("Bad request".to_string()),
-                        }
-                        .into_bytes(),
-                        &mut stream,
-                        |result| match result {
-                            Ok(()) => warn!("Send failure response to peer `{peer}`: {e}"),
-                            Err(e) => error!("Send packet to peer `{peer}` failed: {e}"),
-                        },
-                    ),
+                    Err(e) => {
+                        return send(
+                            &response::failure::permanent::BadRequest {
+                                message: Some("Bad request".to_string()),
+                            }
+                            .into_bytes(),
+                            &mut stream,
+                            |result| match result {
+                                Ok(()) => warn!("Send failure response to peer `{peer}`: {e}"),
+                                Err(e) => error!("Send packet to peer `{peer}` failed: {e}"),
+                            },
+                        )
+                        .await;
+                    }
                 }
             }
         }
@@ -266,21 +326,31 @@ async fn response(
             }
         },
     )
+    .await
 }
 
-fn send(data: &[u8], stream: &mut TlsStream<TcpStream>, callback: impl FnOnce(Result<()>)) {
-    fn close(stream: &mut TlsStream<TcpStream>) -> Result<()> {
-        stream.flush()?;
+async fn send(
+    data: &[u8],
+    stream: &mut TlsStream<TcpStream>,
+    callback: impl FnOnce(std::io::Result<()>),
+) {
+    async fn close(stream: &mut TlsStream<TcpStream>) -> std::io::Result<()> {
+        stream.flush().await?;
+
         // close connection gracefully
         // https://geminiprotocol.net/docs/protocol-specification.gmi#closing-connections
-        stream.shutdown()?;
+        stream.shutdown().await?;
         Ok(())
     }
-    callback((|| {
-        stream.write_all(data)?;
-        close(stream)?;
+
+    let result = async {
+        stream.write_all(data).await?;
+        close(stream).await?;
         Ok(())
-    })());
+    }
+    .await;
+
+    callback(result);
 }
 
 async fn list(state: &State, keyword: Option<&str>, page: Option<usize>) -> Result<String> {
@@ -494,12 +564,11 @@ async fn info(state: &State, torrent: Torrent) -> Result<String> {
             let p = file.path();
             b.push(match state.public.href(&i.info_hash.as_string(), &p) {
                 Some(href) => format!(
-                    "=> {} {} ({})",
+                    "=> {} {p} ({})",
                     urlencoding::encode(&href),
-                    p,
                     format::size(file.length)
                 ),
-                None => format!("{} ({})", p, format::size(file.length)), // * ?
+                None => format!("{p} ({})", format::size(file.length)), // * ?
             })
         }
     }
