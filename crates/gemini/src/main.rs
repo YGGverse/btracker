@@ -58,36 +58,44 @@ async fn main() -> std::io::Result<()> {
     let mut buffer = vec![];
     File::open(&config.identity)?.read_to_end(&mut buffer)?;
 
-    let pfx = p12::PFX::parse(&buffer).map_err(|e| {
+    let keystore = p12_keystore::KeyStore::from_pkcs12(
+        &buffer,
+        &config.password,
+        p12_keystore::Pkcs12ImportPolicy::Strict,
+    )
+    .map_err(|e| {
         std::io::Error::new(
             std::io::ErrorKind::InvalidData,
-            format!("PFX parse error: {:?}", e),
+            format!("PKCS12/PFX decryption failed: {e:?}"),
         )
     })?;
 
-    let cert_bags = pfx.cert_bags(&config.password).map_err(|e| {
+    let (_, chain) = keystore.private_key_chain().ok_or_else(|| {
         std::io::Error::new(
-            std::io::ErrorKind::InvalidData,
-            format!("Cert bags error: {:?}", e),
+            std::io::ErrorKind::NotFound,
+            "No private key chain found in PFX",
         )
     })?;
 
-    let cert_chain: Vec<CertificateDer<'static>> =
-        cert_bags.into_iter().map(CertificateDer::from).collect();
+    let cert_chain: Vec<CertificateDer<'static>> = chain
+        .certs()
+        .iter()
+        .map(|cert| CertificateDer::from(cert.as_der().to_vec()))
+        .collect();
 
-    let key_bags = pfx.key_bags(&config.password).map_err(|e| {
+    if cert_chain.is_empty() {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            "No certificates found in PFX",
+        ));
+    }
+
+    let private_key = PrivateKeyDer::try_from(chain.key().as_der().to_vec()).map_err(|e| {
         std::io::Error::new(
             std::io::ErrorKind::InvalidData,
-            format!("Key bags error: {:?}", e),
+            format!("Invalid private key format: {e:?}"),
         )
     })?;
-
-    let key_bytes = key_bags.into_iter().next().ok_or_else(|| {
-        std::io::Error::new(std::io::ErrorKind::NotFound, "No private key found in PFX")
-    })?;
-
-    let private_key = PrivateKeyDer::try_from(key_bytes)
-        .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
 
     let server_config = ServerConfig::builder_with_provider(Arc::new(
         rustls::crypto::aws_lc_rs::default_provider(),
@@ -99,7 +107,6 @@ async fn main() -> std::io::Result<()> {
     .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
 
     let acceptor = TlsAcceptor::from(Arc::new(server_config));
-
     let listener = TcpListener::bind(&config.bind).await?;
 
     info!("Server started on `{}`", config.bind);
