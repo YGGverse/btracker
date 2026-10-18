@@ -17,6 +17,6 @@ crawler = ["dep:log", "dep:regex"]
 
 [dependencies]
 chrono = { version = "0.4.45", features = ["serde"], optional = true }
-librqbit-core = { version = "5.0.0", optional = true }
+librqbit-core = { version = "5.0.0", optional = true, default-features = false, features = ["sha1-ring"] }
 log = { version = "0.4.28", optional = true }
 regex = { version = "1.11.2", optional = true }
