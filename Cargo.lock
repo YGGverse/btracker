@@ -719,24 +719,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "commoncrypto"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d056a8586ba25a1e4d61cb090900e495952c7886786fc55f909ab2f819b69007"
-dependencies = [
- "commoncrypto-sys",
-]
-
-[[package]]
-name = "commoncrypto-sys"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1fed34f46747aa73dfaa578069fd8279d2818ade2b55f38f22a9401c7f4083e2"
-dependencies = [
- "libc",
-]
-
-[[package]]
 name = "compression-codecs"
 version = "0.4.46"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -870,18 +852,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ce6e4c961d6cd6c9a86db418387425e8bdeaf05b3c8bc1411e6dca4c252f1453"
 dependencies = [
  "hybrid-array",
-]
-
-[[package]]
-name = "crypto-hash"
-version = "0.3.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8a77162240fd97248d19a564a565eb563a3f592b386e4136fb300909e67dddca"
-dependencies = [
- "commoncrypto",
- "hex 0.3.2",
- "openssl",
- "winapi",
 ]
 
 [[package]]
@@ -1591,12 +1561,6 @@ checksum = "e17592d60ebacc7d5e169f4663c5f84f9161cc90328abcfe8456f41e4dfcb284"
 
 [[package]]
 name = "hex"
-version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "805026a5d0141ffc30abb3be3173848ad46a1b1664fe632428479619a3644d77"
-
-[[package]]
-name = "hex"
 version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
@@ -2230,7 +2194,7 @@ dependencies = [
  "dashmap",
  "futures",
  "governor",
- "hex 0.4.3",
+ "hex",
  "http 1.5.0",
  "intervaltree",
  "itertools 0.15.0",
@@ -2357,7 +2321,7 @@ dependencies = [
  "bytes",
  "data-encoding",
  "directories",
- "hex 0.4.3",
+ "hex",
  "itertools 0.14.0",
  "librqbit-bencode 3.1.0",
  "librqbit-buffers 4.2.0",
@@ -2383,7 +2347,7 @@ dependencies = [
  "data-encoding",
  "directories",
  "encoding_rs",
- "hex 0.4.3",
+ "hex",
  "itertools 0.15.0",
  "librqbit-bencode 9.0.1",
  "librqbit-buffers 9.0.1",
@@ -2498,7 +2462,6 @@ checksum = "79373a02db73159e4de7ca5d27b6eeae2d540df66c6801db2b01c5513d087524"
 dependencies = [
  "assert_cfg",
  "aws-lc-rs",
- "crypto-hash",
 ]
 
 [[package]]
@@ -4003,7 +3966,7 @@ dependencies = [
  "base64",
  "bs58",
  "chrono",
- "hex 0.4.3",
+ "hex",
  "indexmap 1.9.3",
  "indexmap 2.14.2",
  "jiff",
