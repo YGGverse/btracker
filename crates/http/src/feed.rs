@@ -57,7 +57,7 @@ impl Feed {
     pub fn push(&mut self, torrent: Torrent) {
         self.buffer.push_str(&format!(
             "<item><guid>{}</guid><title>{}</title><link>{}</link>",
-            &torrent.info_hash,
+            torrent.info_hash,
             escape(
                 &torrent
                     .name

@@ -29,7 +29,7 @@ impl Buffer {
                 Err(e) => {
                     warn!(
                         "[full-scrape] full-scrape {} update failed: {e}; skip",
-                        &this.query
+                        this.query
                     );
                     continue; // skip without panic
                 }
