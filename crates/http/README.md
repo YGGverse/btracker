@@ -1,9 +1,9 @@
 # btracker-http
 
-[![Dependencies](https://deps.rs/repo/github/yggverse/btracker/status.svg)](https://deps.rs/repo/github/yggverse/btracker)
-[![crates.io](https://img.shields.io/crates/v/btracker.svg)](https://crates.io/crates/btracker)
+[![Dependencies](https://deps.rs/repo/github/yggverse/btracker-http/status.svg)](https://deps.rs/repo/github/yggverse/btracker-http)
+[![crates.io](https://img.shields.io/crates/v/btracker-http.svg)](https://crates.io/crates/btracker-http)
 
-βtracker is a social BitTorrent aggregator based on the btracker-fs, btracker-crawler index and [Rocket](https://rocket.rs) web-framework.
+βtracker is a social BitTorrent aggregator based on the `btracker-fs`, `btracker-crawler` index and [Rocket](https://rocket.rs) web-framework.
 
 ## Screenshots
 
