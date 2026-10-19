@@ -75,6 +75,10 @@ pub struct Config {
     #[arg(long)]
     pub scrape_proxy_i2p: Option<Url>,
 
+    /// Custom headers for HTTP trackers request
+    #[arg(long)]
+    pub scrape_http_headers: Vec<String>,
+
     /// Configure instance in the debug mode
     #[arg(long, default_value_t = false)]
     pub debug: bool,

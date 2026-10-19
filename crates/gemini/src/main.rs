@@ -47,6 +47,7 @@ async fn main() -> std::io::Result<()> {
             config.scrape_timeout,
             config.scrape_proxy.as_ref(),
             config.scrape_proxy_i2p.as_ref(),
+            &config.scrape_http_headers,
         )
         .unwrap(),
         format_date: config.format_date,

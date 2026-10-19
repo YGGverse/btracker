@@ -40,6 +40,10 @@ pub struct Config {
     #[arg(long)]
     pub scrape_proxy_i2p: Option<Url>,
 
+    /// Custom headers for HTTP trackers request
+    #[arg(long)]
+    pub scrape_http_headers: Vec<String>,
+
     /// Bind server `host:port` to listen incoming connections on it
     #[arg(short, long, default_value_t = SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::LOCALHOST, 1965)))]
     pub bind: SocketAddr,

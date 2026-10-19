@@ -535,7 +535,27 @@ dependencies = [
  "colored",
  "cyphernet",
  "data-encoding",
- "dns-lookup",
+ "dns-lookup 3.0.1",
+ "rand 0.10.3",
+ "reqwest",
+ "serde",
+ "tokio",
+ "url",
+]
+
+[[package]]
+name = "btpeer"
+version = "0.13.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9c9c16c64ab67ddcf33eaf22d6e12407562b147a65ea976d663d8282be72a4d2"
+dependencies = [
+ "anyhow",
+ "bendy",
+ "clap",
+ "colored",
+ "cyphernet",
+ "data-encoding",
+ "dns-lookup 4.0.2",
  "rand 0.10.3",
  "reqwest",
  "serde",
@@ -548,7 +568,7 @@ name = "btracker-crawler"
 version = "0.3.0"
 dependencies = [
  "anyhow",
- "btpeer",
+ "btpeer 0.11.1",
  "btracker-fs",
  "chrono",
  "clap",
@@ -605,7 +625,7 @@ dependencies = [
 name = "btracker-http"
 version = "0.2.0"
 dependencies = [
- "btpeer",
+ "btpeer 0.11.1",
  "btracker-fs",
  "btracker-scrape",
  "chrono",
@@ -625,7 +645,7 @@ name = "btracker-scrape"
 version = "0.2.0"
 dependencies = [
  "anyhow",
- "btpeer",
+ "btpeer 0.13.3",
  "url",
 ]
 
@@ -1274,6 +1294,18 @@ dependencies = [
  "libc",
  "socket2 0.6.5",
  "windows-sys 0.60.2",
+]
+
+[[package]]
+name = "dns-lookup"
+version = "4.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "263c0ccfc6b3b6a93e959edad4f985779e76c0b36dbb2e13e3d27c690974adf1"
+dependencies = [
+ "cfg-if",
+ "libc",
+ "socket2 0.6.5",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]

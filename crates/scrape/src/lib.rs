@@ -6,6 +6,7 @@ use url::Url;
 pub type Result = Total;
 
 struct Scrape {
+    headers: Vec<String>,
     proxy: Option<String>,
     timeout: Duration,
     tracker: Url,
@@ -15,6 +16,7 @@ impl Scrape {
     pub fn new(
         tracker: Url,
         timeout: u64,
+        headers: Vec<String>,
         proxy: Option<String>,
         proxy_i2p: Option<String>,
     ) -> R<Self> {
@@ -36,6 +38,7 @@ impl Scrape {
             },
             timeout: Duration::from_secs(timeout),
             tracker,
+            headers,
         })
     }
 
@@ -43,6 +46,7 @@ impl Scrape {
         Ok(btpeer::http::scrape(
             &btpeer::http::query::Scrape::new(self.tracker.as_str(), Some(id20))?,
             self.timeout,
+            &self.headers,
             self.proxy.as_deref(),
         )
         .await?
@@ -58,6 +62,7 @@ impl Buffer {
         timeout: u64,
         proxy: Option<&Url>,
         proxy_i2p: Option<&Url>,
+        headers: &[String],
     ) -> R<Self> {
         let mut this = Vec::with_capacity(trackers.len());
 
@@ -65,6 +70,7 @@ impl Buffer {
             this.push(Scrape::new(
                 url,
                 timeout,
+                headers.to_owned(),
                 proxy.as_ref().map(|p| p.to_string()),
                 proxy_i2p.as_ref().map(|p| p.to_string()),
             )?)

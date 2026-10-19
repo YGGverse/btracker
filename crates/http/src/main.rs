@@ -370,6 +370,7 @@ fn rocket() -> _ {
                 config.scrape_timeout,
                 config.scrape_proxy.as_ref(),
                 config.scrape_proxy_i2p.as_ref(),
+                &config.scrape_http_headers,
             )
             .unwrap(),
         )
