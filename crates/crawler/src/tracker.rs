@@ -18,6 +18,7 @@ use yosemite::{Session, style::Stream};
 
 pub enum Tracker {
     Default {
+        headers: Vec<String>,
         peers_limit: Option<usize>,
         port: u16,
         proxy: Option<Url>,
@@ -26,6 +27,7 @@ pub enum Tracker {
     },
     I2p {
         announce_timeout: Duration,
+        headers: Vec<String>,
         loopback: IpAddr,
         peer_connect_timeout: Duration,
         peers_limit: Option<usize>,
@@ -41,6 +43,7 @@ impl Tracker {
     async fn peers(&self, info_hash: &Id20) -> Result<HashSet<SocketAddr>> {
         Ok(match self {
             Self::Default {
+                headers,
                 peers_limit,
                 port,
                 proxy,
@@ -51,20 +54,25 @@ impl Tracker {
                     btpeer::http::query::Announce::new(url.as_str(), &info_hash.0, *port)?;
 
                 let peers = take_random_peers(
-                    btpeer::http::announce(&announce, *timeout, proxy.as_ref().map(|u| u.as_str()))
-                        .await?
-                        .peers
-                        .0
-                        .into_iter()
-                        .filter(|p| match p {
-                            Peer::Default(this) => {
-                                url.host_str()
-                                    .is_some_and(|h| !h.contains(&this.host.to_string()))
-                                    && this.port != *port // exclude self
-                            }
-                            Peer::I2p(..) => false,
-                        })
-                        .collect(),
+                    btpeer::http::announce(
+                        &announce,
+                        *timeout,
+                        headers,
+                        proxy.as_ref().map(|u| u.as_str()),
+                    )
+                    .await?
+                    .peers
+                    .0
+                    .into_iter()
+                    .filter(|p| match p {
+                        Peer::Default(this) => {
+                            url.host_str()
+                                .is_some_and(|h| !h.contains(&this.host.to_string()))
+                                && this.port != *port // exclude self
+                        }
+                        Peer::I2p(..) => false,
+                    })
+                    .collect(),
                     *peers_limit,
                 );
 
@@ -91,6 +99,7 @@ impl Tracker {
             }
             Self::I2p {
                 announce_timeout,
+                headers,
                 loopback,
                 peer_connect_timeout,
                 peers_limit,
@@ -109,6 +118,7 @@ impl Tracker {
                     btpeer::http::announce_i2p(
                         &announce,
                         *announce_timeout,
+                        headers,
                         proxy.as_ref().map(|u| u.as_str()),
                     )
                     .await?

@@ -6,8 +6,9 @@ use anyhow::Result;
 use btracker_fs::public::{Order, Sort, Storage, Torrent};
 use btracker_scrape::Buffer as Scrape;
 use config::Config;
-use librqbit_core::torrent_metainfo::{TorrentMetaV1Owned, torrent_from_bytes};
+use librqbit_core::torrent_metainfo::torrent_from_bytes;
 use log::*;
+use plurify::Plurify;
 use rustls::{
     ServerConfig,
     pki_types::{CertificateDer, PrivateKeyDer},
@@ -429,11 +430,12 @@ async fn list(state: &State, keyword: Option<&str>, page: Option<usize>) -> Resu
     } else {
         let mut si = scrape_index.write().await;
         for torrent in result.list {
-            let i: TorrentMetaV1Owned = torrent_from_bytes(&torrent.bytes)?;
+            let i = torrent_from_bytes(&torrent.bytes)?;
             b.push(format!(
                 "=> /{} {}",
                 i.info_hash.as_string(),
                 i.info
+                    .data
                     .name
                     .as_ref()
                     .map(|n| n.to_string())
@@ -442,8 +444,17 @@ async fn list(state: &State, keyword: Option<&str>, page: Option<usize>) -> Resu
             b.push(format!(
                 "{} • {} • {}",
                 torrent.time.format(&state.format_date),
-                format::total(&i),
-                format::files(&i)
+                i.info
+                    .data
+                    .files
+                    .as_ref()
+                    .map(|files| files.iter().map(|file| file.length).sum::<u64>())
+                    .unwrap_or_default()
+                    + i.info.data.length.unwrap_or_default(),
+                {
+                    let total = i.info.data.files.as_ref().map(|f| f.len()).unwrap_or(1);
+                    format!("{total} {}", total.plurify(&["file", "files", "files"]))
+                }
             ));
             if let Some(s) = si.remove(&i.info_hash.0) {
                 b.push(format!(
@@ -512,13 +523,14 @@ async fn info(state: &State, torrent: Torrent) -> Result<String> {
         }
     }
 
-    let i: TorrentMetaV1Owned = torrent_from_bytes(&torrent.bytes)?;
+    let i = torrent_from_bytes(&torrent.bytes)?;
 
     let mut b = Vec::new();
 
     b.push(format!(
         "# {} • {}\n",
         i.info
+            .data
             .name
             .as_ref()
             .map(|n| n.to_string())
@@ -530,30 +542,48 @@ async fn info(state: &State, torrent: Torrent) -> Result<String> {
     b.push(format!(
         "{} • {} • {} • ↑ {} ↓ {} ⏲ {}\n",
         torrent.time.format(&state.format_date),
-        format::total(&i),
-        format::files(&i),
+        i.info
+            .data
+            .files
+            .as_ref()
+            .map(|files| files.iter().map(|file| file.length).sum::<u64>())
+            .unwrap_or_default()
+            + i.info.data.length.unwrap_or_default(),
+        {
+            let total = i.info.data.files.as_ref().map(|f| f.len()).unwrap_or(1);
+            format!("{total} {}", total.plurify(&["file", "files", "files"]))
+        },
         t.complete,
         t.downloaded,
         t.incomplete
     ));
 
-    b.push(format!(
-        "=> {} Magnet\n",
-        format::magnet(&i, state.tracker.as_ref())
-    ));
+    b.push(format!("=> {} Magnet\n", {
+        let mut b = format!("magnet:?xt=urn:btih:{}", i.info_hash.as_string());
+        if let Some(ref n) = i.info.data.name {
+            b.push_str("&dn=");
+            b.push_str(&urlencoding::encode(&n.to_string()))
+        }
+        if let Some(ref t) = state.tracker {
+            for tracker in t {
+                b.push_str("&tr=");
+                b.push_str(&urlencoding::encode(tracker.as_str()))
+            }
+        }
+        b
+    }));
 
-    if let Some(files) = i.info.files.map(|files| {
+    if let Some(files) = i.info.data.files.map(|files| {
         let mut b = Vec::with_capacity(files.len());
         for f in files {
-            let mut p = PathBuf::new();
             b.push(File {
                 length: f.length,
-                path: match f.full_path(&mut p) {
-                    Ok(()) => Some(p),
-                    Err(e) => {
-                        warn!("Filename decode error: {e}");
-                        None
+                path: {
+                    let mut p = PathBuf::new();
+                    for b in &f.path {
+                        p.push(String::from_utf8_lossy(b.as_ref()).as_ref());
                     }
+                    if p.is_empty() { None } else { Some(p) }
                 },
             })
         }

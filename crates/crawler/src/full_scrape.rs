@@ -6,6 +6,7 @@ use std::{collections::HashSet, time::Duration};
 use url::Url;
 
 pub struct FullScrape {
+    pub headers: Vec<String>,
     pub proxy: Option<Url>,
     pub query: Scrape,
     pub timeout: Duration,
@@ -21,6 +22,7 @@ impl Buffer {
             let scrape = match btpeer::http::scrape(
                 &this.query,
                 this.timeout,
+                &this.headers,
                 this.proxy.as_ref().map(|u| u.as_str()),
             )
             .await

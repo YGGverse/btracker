@@ -19,4 +19,7 @@ pub struct Scrape {
 
     /// Use HTTP(s) proxy, e.g. `http://127.0.0.1:9050` or `http://127.0.0.1:4444` for I2P
     pub proxy_url: Option<Url>,
+
+    /// Custom HTTP tracker headers
+    pub headers: Vec<String>,
 }

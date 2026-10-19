@@ -2,11 +2,9 @@ mod file;
 
 use chrono::{DateTime, Utc};
 use file::File;
-use librqbit_core::{
-    Id20,
-    torrent_metainfo::{self, TorrentMetaV1Owned},
-};
+use librqbit_core::{Id20, torrent_metainfo};
 use rocket::serde::Serialize;
+use std::path::PathBuf;
 
 #[derive(Clone, Debug, Serialize)]
 #[serde(crate = "rocket::serde")]
@@ -30,8 +28,7 @@ pub struct Torrent {
 
 impl Torrent {
     pub fn from_public(bytes: &[u8], time: DateTime<Utc>) -> Result<Self, String> {
-        let i: TorrentMetaV1Owned =
-            torrent_metainfo::torrent_from_bytes(bytes).map_err(|e| e.to_string())?;
+        let i = torrent_metainfo::torrent_from_bytes(bytes).map_err(|e| e.to_string())?;
         Ok(Torrent {
             id: i.info_hash,
             info_hash: i.info_hash.as_string(),
@@ -41,24 +38,24 @@ impl Torrent {
             creation_date: i
                 .creation_date
                 .map(|t| DateTime::from_timestamp_nanos(t as i64)),
-            size: i.info.length.unwrap_or_default()
+            size: i.info.data.length.unwrap_or_default()
                 + i.info
+                    .data
                     .files
                     .as_ref()
                     .map(|files| files.iter().map(|f| f.length).sum::<u64>())
                     .unwrap_or_default(),
-            files: i.info.files.map(|files| {
+            files: i.info.data.files.map(|files| {
                 let mut b = Vec::with_capacity(files.len());
                 for f in files {
-                    let mut p = std::path::PathBuf::new();
                     b.push(File {
                         length: f.length,
-                        path: match f.full_path(&mut p) {
-                            Ok(()) => Some(p),
-                            Err(e) => {
-                                warn!("Filename decode error: {e}");
-                                None
+                        path: {
+                            let mut p = PathBuf::new();
+                            for b in &f.path {
+                                p.push(String::from_utf8_lossy(b.as_ref()).as_ref());
                             }
+                            if p.is_empty() { None } else { Some(p) }
                         },
                     })
                 }
@@ -67,9 +64,9 @@ impl Torrent {
             }),
             publisher_url: i.publisher_url.map(|u| u.to_string()),
             publisher: i.publisher.map(|p| p.to_string()),
-            is_private: i.info.private,
-            length: i.info.length,
-            name: i.info.name.map(|e| e.to_string()),
+            is_private: i.info.data.private,
+            length: i.info.data.length,
+            name: i.info.data.name.map(|e| e.to_string()),
             time,
         })
     }

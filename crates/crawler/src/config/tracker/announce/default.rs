@@ -24,4 +24,7 @@ pub struct Default {
 
     /// Max peers per tracker
     pub peers_limit: Option<usize>,
+
+    /// Custom HTTP tracker headers
+    pub headers: Vec<String>,
 }

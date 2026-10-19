@@ -71,6 +71,7 @@ async fn main() -> Result<()> {
             proxy: i.proxy_url,
             query: Scrape::new(i.url.as_str(), None)?,
             timeout: Duration::from_secs(i.timeout),
+            headers: i.headers,
         })
     }
 
@@ -93,11 +94,12 @@ async fn main() -> Result<()> {
         }
         info!("init tracker {}, proxy: {:?}", i.url, i.proxy_url);
         trackers.push(Tracker::Default {
+            headers: i.headers,
+            peers_limit: i.peers_limit,
+            port: i.port,
             proxy: i.proxy_url,
             timeout: Duration::from_secs(i.timeout),
             url: i.url,
-            port: i.port,
-            peers_limit: i.peers_limit,
         })
     }
 
@@ -112,6 +114,7 @@ async fn main() -> Result<()> {
             }
             info!("init I2P tracker {}, proxy: {:?}", i.url, i.proxy_url);
             trackers.push(Tracker::I2p {
+                headers: i.headers,
                 loopback: i.loopback_host,
                 proxy: i.proxy_url,
                 announce_timeout: Duration::from_secs(i.timeout),

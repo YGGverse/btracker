@@ -39,4 +39,7 @@ pub struct I2p {
 
     /// Max peers per tracker
     pub peers_limit: Option<usize>,
+
+    /// Custom HTTP tracker headers
+    pub headers: Vec<String>,
 }
