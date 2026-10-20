@@ -39,9 +39,11 @@ impl Scrape {
             bail!("Tracker host is required")
         }
 
+        let host = tracker.host_str().unwrap();
+
         Ok(if tracker.scheme().starts_with("http") {
             Self::Http {
-                proxy: if tracker.host_str().unwrap().ends_with(".i2p") {
+                proxy: if host.ends_with(".i2p") {
                     if proxy_i2p.is_none() {
                         bail!("I2P proxy is required for tracker `{tracker}`")
                     }
@@ -54,13 +56,11 @@ impl Scrape {
                 headers,
             }
         } else if tracker.scheme() == "udp" {
-            let host = tracker.host_str().unwrap();
-
             if host.ends_with(".i2p") {
                 bail!("I2P supports HTTP trackers only")
             }
 
-            let ip = IpAddr::from_str(host)?; // @TODO DNS for UDP trackers yet not supported
+            let ip = IpAddr::from_str(host.trim_start_matches('[').trim_end_matches(']'))?; // @TODO DNS for UDP trackers yet not supported
             let timeout = Duration::from_secs(timeout);
 
             Self::Udp {
@@ -82,7 +82,15 @@ impl Scrape {
                     socket.set_write_timeout(Some(timeout))?;
                     socket
                 },
-                tracker: SocketAddr::from_str(tracker.as_str())?,
+                tracker: SocketAddr::from_str(&format!(
+                    "{}:{}",
+                    if ip.is_ipv6() {
+                        format!("[{ip}]")
+                    } else {
+                        ip.to_string()
+                    },
+                    tracker.port().unwrap()
+                ))?,
             }
         } else {
             bail!("Unsupported tracker scheme")
