@@ -26,5 +26,6 @@ pub struct Default {
     pub peers_limit: Option<usize>,
 
     /// Custom HTTP tracker headers
+    #[serde_inline_default(Vec::new())]
     pub headers: Vec<String>,
 }
