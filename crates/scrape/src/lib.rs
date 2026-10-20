@@ -3,6 +3,7 @@ use btpeer::udp::Server;
 use std::{
     net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6, UdpSocket},
     str::FromStr,
+    sync::Arc,
     time::Duration,
 };
 use url::Url;
@@ -23,7 +24,7 @@ enum Scrape {
     },
     Udp {
         server: UdpSocket,
-        tracker: SocketAddr,
+        tracker: Arc<SocketAddr>, // required by the rocket framework (btracker-http)
     },
 }
 
@@ -82,7 +83,7 @@ impl Scrape {
                     socket.set_write_timeout(Some(timeout))?;
                     socket
                 },
-                tracker: SocketAddr::from_str(&format!(
+                tracker: Arc::new(SocketAddr::from_str(&format!(
                     "{}:{}",
                     if ip.is_ipv6() {
                         format!("[{ip}]")
@@ -90,7 +91,7 @@ impl Scrape {
                         ip.to_string()
                     },
                     tracker.port().unwrap()
-                ))?,
+                ))?),
             }
         } else {
             bail!("Unsupported tracker scheme")
