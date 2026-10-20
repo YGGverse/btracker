@@ -596,7 +596,7 @@ version = "0.3.0"
 dependencies = [
  "anyhow",
  "btracker-fs 0.5.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "btracker-scrape",
+ "btracker-scrape 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "chrono",
  "clap",
  "librqbit-core",
@@ -619,7 +619,7 @@ version = "0.2.1"
 dependencies = [
  "btpeer",
  "btracker-fs 0.5.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "btracker-scrape",
+ "btracker-scrape 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "chrono",
  "clap",
  "librqbit-core",
@@ -635,6 +635,17 @@ dependencies = [
 [[package]]
 name = "btracker-scrape"
 version = "0.3.0"
+dependencies = [
+ "anyhow",
+ "btpeer",
+ "url",
+]
+
+[[package]]
+name = "btracker-scrape"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1f99d78031ca1168a235a87c8787ffe2ba54a1ef9440fdb62de799f115dffc9e"
 dependencies = [
  "anyhow",
  "btpeer",
