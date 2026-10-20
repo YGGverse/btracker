@@ -21,5 +21,6 @@ pub struct Scrape {
     pub proxy_url: Option<Url>,
 
     /// Custom HTTP tracker headers
+    #[serde_inline_default(Vec::new())]
     pub headers: Vec<String>,
 }
