@@ -361,7 +361,7 @@ async fn list(state: &State, keyword: Option<&str>, page: Option<usize>) -> Resu
         keyword.map(|k| format!("?{}", k)).unwrap_or_default()
     }
 
-    let scrape_index: Arc<RwLock<HashMap<[u8; 20], btracker_scrape::Result>>> =
+    let scrape_index: Arc<RwLock<HashMap<[u8; 20], btracker_scrape::Total>>> =
         Arc::new(RwLock::new(HashMap::new())); // scrape info-hashes once
 
     let result = state

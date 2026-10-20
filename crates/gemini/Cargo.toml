@@ -12,7 +12,7 @@ repository = "https://github.com/YGGverse/btracker"
 [dependencies]
 anyhow = "1.0.95"
 btracker-fs = { version = "0.5.2", features = ["public"] }
-btracker-scrape = "0.2.0"
+btracker-scrape = "0.3.0"
 chrono = "0.4.45"
 clap = { version = "4.5.30", features = ["derive"] }
 librqbit-core = { version = "9.0.1", default-features = false, features = ["sha1-ring"] }

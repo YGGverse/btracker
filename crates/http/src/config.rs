@@ -60,6 +60,7 @@ pub struct Config {
     pub port: u16,
 
     /// Scrape(s) to local peers count resolve
+    /// * tip: local UDP works faster!
     #[arg(long)]
     pub scrape: Vec<Url>,
 

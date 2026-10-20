@@ -1,15 +1,30 @@
-use anyhow::{Result as R, bail};
-use btpeer::http::response::scrape::Total;
-use std::time::Duration;
+use anyhow::{Result, bail};
+use btpeer::udp::Server;
+use std::{
+    net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6, UdpSocket},
+    str::FromStr,
+    time::Duration,
+};
 use url::Url;
 
-pub type Result = Total;
+#[derive(Default)]
+pub struct Total {
+    pub complete: u32,
+    pub downloaded: u32,
+    pub incomplete: u32,
+}
 
-struct Scrape {
-    headers: Vec<String>,
-    proxy: Option<String>,
-    timeout: Duration,
-    tracker: Url,
+enum Scrape {
+    Http {
+        headers: Vec<String>,
+        proxy: Option<String>,
+        timeout: Duration,
+        tracker: Url,
+    },
+    Udp {
+        server: UdpSocket,
+        tracker: SocketAddr,
+    },
 }
 
 impl Scrape {
@@ -19,38 +34,91 @@ impl Scrape {
         headers: Vec<String>,
         proxy: Option<String>,
         proxy_i2p: Option<String>,
-    ) -> R<Self> {
-        if !tracker.scheme().starts_with("http") {
-            bail!("HTTP trackers only!")
+    ) -> Result<Self> {
+        if tracker.host_str().is_none() {
+            bail!("Tracker host is required")
         }
-        Ok(Self {
-            proxy: if tracker
-                .host_str()
-                .expect("Host is required")
-                .ends_with(".i2p")
-            {
-                if proxy_i2p.is_none() {
-                    bail!("I2P proxy is required for tracker `{tracker}`")
-                }
-                proxy_i2p
-            } else {
-                proxy
-            },
-            timeout: Duration::from_secs(timeout),
-            tracker,
-            headers,
+
+        Ok(if tracker.scheme().starts_with("http") {
+            Self::Http {
+                proxy: if tracker.host_str().unwrap().ends_with(".i2p") {
+                    if proxy_i2p.is_none() {
+                        bail!("I2P proxy is required for tracker `{tracker}`")
+                    }
+                    proxy_i2p
+                } else {
+                    proxy
+                },
+                timeout: Duration::from_secs(timeout),
+                tracker,
+                headers,
+            }
+        } else if tracker.scheme() == "udp" {
+            let host = tracker.host_str().unwrap();
+
+            if host.ends_with(".i2p") {
+                bail!("I2P supports HTTP trackers only")
+            }
+
+            let ip = IpAddr::from_str(host)?; // @TODO DNS for UDP trackers yet not supported
+            let timeout = Duration::from_secs(timeout);
+
+            Self::Udp {
+                server: {
+                    let socket = if ip.is_ipv6() {
+                        UdpSocket::bind(SocketAddr::V6(SocketAddrV6::new(
+                            Ipv6Addr::UNSPECIFIED,
+                            0,
+                            0,
+                            0,
+                        )))?
+                    } else {
+                        UdpSocket::bind(SocketAddr::V4(SocketAddrV4::new(
+                            Ipv4Addr::UNSPECIFIED,
+                            0,
+                        )))?
+                    };
+                    socket.set_read_timeout(Some(timeout))?;
+                    socket.set_write_timeout(Some(timeout))?;
+                    socket
+                },
+                tracker: SocketAddr::from_str(tracker.as_str())?,
+            }
+        } else {
+            bail!("Unsupported tracker scheme")
         })
     }
 
-    pub async fn get(&self, id20: &[[u8; 20]]) -> R<Total> {
-        Ok(btpeer::http::scrape(
-            &btpeer::http::query::Scrape::new(self.tracker.as_str(), Some(id20))?,
-            self.timeout,
-            &self.headers,
-            self.proxy.as_deref(),
-        )
-        .await?
-        .total)
+    pub async fn get(&self, id20: &[[u8; 20]]) -> Result<Total> {
+        Ok(match self {
+            Self::Http {
+                headers,
+                proxy,
+                timeout,
+                tracker,
+            } => {
+                let response = btpeer::http::scrape(
+                    &btpeer::http::query::Scrape::new(tracker.as_str(), Some(id20))?,
+                    *timeout,
+                    headers,
+                    proxy.as_deref(),
+                )
+                .await?;
+                Total {
+                    complete: response.total.complete,
+                    downloaded: response.total.downloaded,
+                    incomplete: response.total.incomplete,
+                }
+            }
+            Self::Udp { server, tracker } => {
+                let response = server.scrape(tracker, id20)?;
+                Total {
+                    complete: response.seeders,
+                    downloaded: response.peers,
+                    incomplete: response.leechers,
+                }
+            }
+        })
     }
 }
 
@@ -63,7 +131,7 @@ impl Buffer {
         proxy: Option<&Url>,
         proxy_i2p: Option<&Url>,
         headers: &[String],
-    ) -> R<Self> {
+    ) -> Result<Self> {
         let mut this = Vec::with_capacity(trackers.len());
 
         for url in trackers {
@@ -79,7 +147,7 @@ impl Buffer {
         Ok(Self(this))
     }
 
-    pub async fn get(&self, id20: &[[u8; 20]]) -> R<Total> {
+    pub async fn get(&self, id20: &[[u8; 20]]) -> Result<Total> {
         let mut total = Total::default();
 
         for this in self.0.iter() {

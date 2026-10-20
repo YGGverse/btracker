@@ -25,6 +25,7 @@ pub struct Config {
     pub tracker: Option<Vec<Url>>,
 
     /// Scrape(s) to local peers count resolve
+    /// * tip: local UDP works faster!
     #[arg(long)]
     pub scrape: Vec<Url>,
 
