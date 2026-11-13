@@ -5,7 +5,7 @@ use librqbit::dht::Id20;
 use log::*;
 use std::{
     collections::{HashMap, HashSet},
-    net::{IpAddr, SocketAddr},
+    net::{IpAddr, SocketAddr, UdpSocket},
     sync::{
         Arc,
         atomic::{AtomicU64, Ordering},
@@ -17,22 +17,28 @@ use url::Url;
 use yosemite::{Session, style::Stream};
 
 pub enum Tracker {
-    Default {
+    Http {
+        announce_port: u16,
         headers: Vec<String>,
         peers_limit: Option<usize>,
-        port: u16,
         proxy: Option<Url>,
         timeout: Duration,
         url: Url,
     },
+    Udp {
+        announce_port: u16,
+        peers_limit: Option<usize>,
+        server: UdpSocket,
+        socket: SocketAddr,
+    },
     I2p {
         announce_timeout: Duration,
+        announce_port: u16,
         headers: Vec<String>,
         loopback: IpAddr,
         peer_connect_timeout: Duration,
         peers_limit: Option<usize>,
         peers_map: Arc<RwLock<HashMap<String, I2pSession>>>,
-        port: u16,
         proxy: Option<Url>,
         sam_session: Arc<RwLock<Session<Stream>>>,
         url: Url,
@@ -42,16 +48,16 @@ pub enum Tracker {
 impl Tracker {
     async fn peers(&self, info_hash: &Id20) -> Result<HashSet<SocketAddr>> {
         Ok(match self {
-            Self::Default {
+            Self::Http {
+                announce_port,
                 headers,
                 peers_limit,
-                port,
                 proxy,
                 timeout,
                 url,
             } => {
                 let announce =
-                    btpeer::http::query::Announce::new(url.as_str(), &info_hash.0, *port)?;
+                    btpeer::http::query::Announce::new(url.as_str(), &info_hash.0, *announce_port)?;
 
                 let peers = take_random_peers(
                     btpeer::http::announce(
@@ -68,7 +74,7 @@ impl Tracker {
                         Peer::Default(this) => {
                             url.host_str()
                                 .is_some_and(|h| !h.contains(&this.host.to_string()))
-                                && this.port != *port // exclude self
+                                && this.port != *announce_port // exclude self
                         }
                         Peer::I2p(..) => false,
                     })
@@ -76,41 +82,45 @@ impl Tracker {
                     *peers_limit,
                 );
 
-                let mut b = HashSet::with_capacity(peers.len());
+                sockets_for(peers)
+            }
+            Self::Udp {
+                announce_port,
+                peers_limit,
+                server,
+                socket,
+            } => {
+                use btpeer::udp::Server;
+                let peers = take_random_peers(
+                    server
+                        .announce(socket, &info_hash.0, *announce_port)?
+                        .peers
+                        .0
+                        .into_iter()
+                        .filter(|p| match p {
+                            Peer::Default(this) => this.port != *announce_port,
+                            Peer::I2p(..) => false,
+                        })
+                        .collect(),
+                    *peers_limit,
+                );
 
-                for p in peers {
-                    match p {
-                        Peer::Default(peer) => {
-                            let p = SocketAddr::new(peer.host, peer.port);
-                            if b.insert(p) {
-                                debug!("[tracker] add peer: {p}")
-                            } else {
-                                debug!("[tracker] replace existing peer: {p}")
-                            }
-                        }
-                        Peer::I2p(peer) => {
-                            unreachable!(
-                                "[tracker] unexpected peer {peer} from tracker {url}, skip"
-                            )
-                        }
-                    }
-                }
-                b
+                sockets_for(peers)
             }
             Self::I2p {
                 announce_timeout,
+                announce_port,
                 headers,
                 loopback,
                 peer_connect_timeout,
                 peers_limit,
                 peers_map,
-                port,
                 proxy,
                 sam_session,
                 url,
             } => {
                 let announce =
-                    btpeer::http::query::Announce::new(url.as_str(), &info_hash.0, *port)?;
+                    btpeer::http::query::Announce::new(url.as_str(), &info_hash.0, *announce_port)?;
 
                 let b32 = b32(sam_session.read().await.destination().as_bytes());
 
@@ -236,10 +246,11 @@ impl Tracker {
         })
     }
 
-    fn url(&self) -> &Url {
+    fn destination(&self) -> String {
         match self {
-            Self::Default { url, .. } => url,
-            Self::I2p { url, .. } => url,
+            Self::Http { url, .. } => url.to_string(),
+            Self::I2p { url, .. } => url.to_string(),
+            Self::Udp { socket, .. } => socket.to_string(),
         }
     }
 }
@@ -260,7 +271,7 @@ impl Buffer {
         for tracker in self.0.iter() {
             debug!(
                 "[tracker] get peers from {} for {}...",
-                tracker.url(),
+                tracker.destination(),
                 info_hash.as_string(),
             );
             peers.extend(tracker.peers(info_hash).await?)
@@ -297,6 +308,26 @@ fn take_random_peers(mut peers: Vec<Peer>, limit: Option<usize>) -> Vec<Peer> {
             peers
         }
     }
+}
+
+fn sockets_for(peers: Vec<Peer>) -> HashSet<SocketAddr> {
+    let mut b = HashSet::with_capacity(peers.len());
+    for p in peers {
+        match p {
+            Peer::Default(peer) => {
+                let p = SocketAddr::new(peer.host, peer.port);
+                if b.insert(p) {
+                    debug!("[tracker] add peer: {p}")
+                } else {
+                    debug!("[tracker] replace existing peer: {p}")
+                }
+            }
+            Peer::I2p(peer) => {
+                unreachable!("[tracker] unexpected peer {peer} from tracker, skip")
+            }
+        }
+    }
+    b
 }
 
 fn b32(destination: &[u8]) -> String {

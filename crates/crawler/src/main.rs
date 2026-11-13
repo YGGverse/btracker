@@ -2,6 +2,7 @@ mod config;
 mod full_scrape;
 mod opt;
 mod tracker;
+mod udp;
 
 use anyhow::Result;
 use btpeer::http::query::Scrape;
@@ -57,29 +58,40 @@ async fn main() -> Result<()> {
     .unwrap();
 
     // init info-hash sources
-    let mut scrape = Vec::with_capacity(config.tracker.scrape.len());
-
-    for i in config.tracker.scrape {
+    let mut scrape =
+        Vec::with_capacity(config.tracker.scrape_http.len() + config.tracker.scrape_udp.len());
+    for i in config.tracker.scrape_http {
         if !i.url.scheme().starts_with("http") {
-            todo!("HTTP trackers only!")
+            panic!("Unexpected scrape scheme!")
+        }
+        if i.url.host_str().unwrap().ends_with(".i2p") {
+            todo!("I2P scrape source yet not supported!")
         }
         info!(
-            "init full-scrape source {}, proxy: {:?}",
+            "init full-scrape HTTP source {}, proxy: {:?}",
             i.url, i.proxy_url
         );
-        scrape.push(FullScrape {
+        scrape.push(FullScrape::Http {
             proxy: i.proxy_url,
             query: Scrape::new(i.url.as_str(), None)?,
             timeout: Duration::from_secs(i.timeout),
             headers: i.headers,
         })
     }
+    for i in config.tracker.scrape_udp {
+        info!("init full-scrape UDP source {}", i.socket);
+        scrape.push(FullScrape::Udp {
+            server: udp::server_for_socket(&i.socket, i.timeout)?,
+            socket: i.socket,
+        })
+    }
 
     let full_scrape = full_scrape::Buffer(scrape);
 
-    // init trackers (for DHT data preload)
+    // init announce trackers (resolves librqbit peers with custom logic)
     let mut trackers = Vec::with_capacity(
-        config.tracker.announce.len()
+        config.tracker.announce_http.len()
+            + config.tracker.announce_udp.len()
             + config
                 .tracker
                 .announce_i2p
@@ -87,19 +99,36 @@ async fn main() -> Result<()> {
                 .map(|a| a.len())
                 .unwrap_or_default(),
     );
-
-    for i in config.tracker.announce {
+    for i in config.tracker.announce_http {
         if !i.url.scheme().starts_with("http") {
-            todo!("HTTP trackers only!")
+            panic!("Unexpected scrape scheme!")
         }
-        info!("init tracker {}, proxy: {:?}", i.url, i.proxy_url);
-        trackers.push(Tracker::Default {
+        if i.url.host_str().unwrap().ends_with(".i2p") {
+            todo!("I2P scrape source yet not supported!")
+        }
+        info!(
+            "init HTTP announce tracker {} with client port {}, proxy: {:?}",
+            i.url, i.announce_port, i.proxy_url
+        );
+        trackers.push(Tracker::Http {
             headers: i.headers,
             peers_limit: i.peers_limit,
-            port: i.port,
+            announce_port: i.announce_port,
             proxy: i.proxy_url,
             timeout: Duration::from_secs(i.timeout),
             url: i.url,
+        })
+    }
+    for i in config.tracker.announce_udp {
+        info!(
+            "init UDP announce tracker {} with client port {}",
+            i.socket, i.announce_port
+        );
+        trackers.push(Tracker::Udp {
+            announce_port: i.announce_port,
+            peers_limit: i.peers_limit,
+            server: udp::server_for_socket(&i.socket, i.timeout)?,
+            socket: i.socket,
         })
     }
 
@@ -122,7 +151,7 @@ async fn main() -> Result<()> {
                     config.timeout.i2p_peer_connect_timeout_seconds,
                 ),
                 url: i.url,
-                port: i.port,
+                announce_port: i.announce_port,
                 peers_limit: i.peers_limit,
                 sam_session: Arc::new(RwLock::new(
                     Session::new(SessionOptions {
