@@ -325,6 +325,21 @@ async fn main() -> Result<()> {
                         mt.wait_until_initialized().await?;
                         let bytes = mt.with_metadata(|m| {
                                 for (id, info) in m.file_infos.iter().enumerate() {
+                                    if preload.regex.as_ref().is_some_and(|r| {
+                                        !r.is_match(&info.relative_filename.to_string_lossy())
+                                    }) {
+                                        debug!("regex filter match: skip {id} for {h} at {}",
+                                        info.relative_filename.to_string_lossy());
+                                        continue;
+                                    }
+                                    if preload.max_filesize.is_some_and(|limit| info.len > limit) {
+                                        debug!(
+                                            "file size ({}) limit reached, skip file {id} for {h} at {}",
+                                            info.len,
+                                            info.relative_filename.to_string_lossy()
+                                        );
+                                        continue;
+                                    }
                                     if preload
                                         .max_filecount
                                         .is_some_and(|limit| only_files.len() + 1 > limit)
@@ -335,21 +350,6 @@ async fn main() -> Result<()> {
                                             info.relative_filename.to_string_lossy()
                                         );
                                         break;
-                                    }
-                                    if preload.max_filesize.is_some_and(|limit| info.len > limit) {
-                                        debug!(
-                                            "file size ({}) limit reached, skip file {id} for {h} at {}",
-                                            info.len,
-                                            info.relative_filename.to_string_lossy()
-                                        );
-                                        continue;
-                                    }
-                                    if preload.regex.as_ref().is_some_and(|r| {
-                                        !r.is_match(&info.relative_filename.to_string_lossy())
-                                    }) {
-                                        debug!("regex filter match: skip {id} for {h} at {}",
-                                        info.relative_filename.to_string_lossy());
-                                        continue;
                                     }
                                     debug!(
                                         "keep file {id} for {h} as {}",
