@@ -369,8 +369,11 @@ async fn main() -> Result<()> {
                         )
                         .await
                         {
-                            debug!("preload torrent data for {h} failed ({e}), ban temporarily.");
-                            assert!(ban.insert(i));
+                            // No ban here because heavy torrents get repeating in queue and overload the CPU without any chance to success
+                            // Find a way to handle torrents with slow peers or large amounts of data.
+                            // This solution works even if we lose the preview content; it only drops a warning (@TODO reminder)
+                            warn!("preload torrent data for {h} failed ({e}), save metadata only.");
+                            preload.commit(&h, bytes, None)?;
                             continue;
                         }
                         debug!("torrent {h} preload completed.");
