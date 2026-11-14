@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Result, bail};
 use btpeer::Peer;
 use chrono::Utc;
 use librqbit::dht::Id20;
@@ -59,26 +59,38 @@ impl Tracker {
                 let announce =
                     btpeer::http::query::Announce::new(url.as_str(), &info_hash.0, *announce_port)?;
 
-                let peers = take_random_peers(
-                    btpeer::http::announce(
-                        &announce,
-                        *timeout,
-                        headers,
-                        proxy.as_ref().map(|u| u.as_str()),
+                let result = btpeer::http::announce(
+                    &announce,
+                    *timeout,
+                    headers,
+                    proxy.as_ref().map(|u| u.as_str()),
+                )
+                .await?;
+
+                // this could be an issue as people can't publish their peering announces
+                // and request seeds from the btracker-http catalog as feature @TODO think about
+                if result.complete == 0 && result.incomplete == 0 {
+                    bail!(
+                        "{} peer(s) but no active seeds or leechers for {}",
+                        result.peers.0.len(),
+                        info_hash.as_string()
                     )
-                    .await?
-                    .peers
-                    .0
-                    .into_iter()
-                    .filter(|p| match p {
-                        Peer::Default(this) => {
-                            url.host_str()
-                                .is_some_and(|h| !h.contains(&this.host.to_string()))
-                                && this.port != *announce_port // exclude self
-                        }
-                        Peer::I2p(..) => false,
-                    })
-                    .collect(),
+                }
+
+                let peers = take_random_peers(
+                    result
+                        .peers
+                        .0
+                        .into_iter()
+                        .filter(|p| match p {
+                            Peer::Default(this) => {
+                                url.host_str()
+                                    .is_some_and(|h| !h.contains(&this.host.to_string()))
+                                    && this.port != *announce_port // exclude self
+                            }
+                            Peer::I2p(..) => false,
+                        })
+                        .collect(),
                     *peers_limit,
                 );
 
@@ -91,9 +103,21 @@ impl Tracker {
                 socket,
             } => {
                 use btpeer::udp::Server;
+
+                let result = server.announce(socket, &info_hash.0, *announce_port)?;
+
+                // this could be an issue as people can't publish their peering announces
+                // and request seeds from the btracker-http catalog as feature @TODO think about
+                if result.seeders == 0 && result.leechers == 0 {
+                    bail!(
+                        "{} peer(s) but no active seeds or leechers for {}",
+                        result.peers.0.len(),
+                        info_hash.as_string()
+                    )
+                }
+
                 let peers = take_random_peers(
-                    server
-                        .announce(socket, &info_hash.0, *announce_port)?
+                    result
                         .peers
                         .0
                         .into_iter()
@@ -122,24 +146,36 @@ impl Tracker {
                 let announce =
                     btpeer::http::query::Announce::new(url.as_str(), &info_hash.0, *announce_port)?;
 
+                let result = btpeer::http::announce_i2p(
+                    &announce,
+                    *announce_timeout,
+                    headers,
+                    proxy.as_ref().map(|u| u.as_str()),
+                )
+                .await?;
+
+                // this could be an issue as people can't publish their peering announces
+                // and request seeds from the btracker-http catalog as feature @TODO think about
+                if result.complete == 0 && result.incomplete == 0 {
+                    bail!(
+                        "{} peer(s) but no active seeds or leechers for {}",
+                        result.peers.0.len(),
+                        info_hash.as_string()
+                    )
+                }
+
                 let b32 = b32(sam_session.read().await.destination().as_bytes());
 
                 let peers = take_random_peers(
-                    btpeer::http::announce_i2p(
-                        &announce,
-                        *announce_timeout,
-                        headers,
-                        proxy.as_ref().map(|u| u.as_str()),
-                    )
-                    .await?
-                    .peers
-                    .0
-                    .into_iter()
-                    .filter(|p| match p {
-                        Peer::I2p(this) => this.b32 != b32, // exclude self
-                        Peer::Default(..) => false,
-                    })
-                    .collect(),
+                    result
+                        .peers
+                        .0
+                        .into_iter()
+                        .filter(|p| match p {
+                            Peer::I2p(this) => this.b32 != b32, // exclude self
+                            Peer::Default(..) => false,
+                        })
+                        .collect(),
                     *peers_limit,
                 );
 

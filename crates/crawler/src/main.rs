@@ -277,7 +277,7 @@ async fn main() -> Result<()> {
                     }
                 }
                 Err(e) => {
-                    warn!("could not get peers for torrent {h}: {e}, skip.");
+                    debug!("could not get active peers for torrent {h}: {e}, skip.");
                     continue;
                 }
             };
