@@ -2,6 +2,7 @@ mod config;
 mod full_scrape;
 mod opt;
 mod tracker;
+mod udp;
 
 use anyhow::Result;
 use btpeer::http::query::Scrape;
@@ -58,13 +59,15 @@ async fn main() -> Result<()> {
 
     // init info-hash sources
     let mut scrape = Vec::with_capacity(config.tracker.scrape.len());
-
     for i in config.tracker.scrape {
         if !i.url.scheme().starts_with("http") {
-            todo!("HTTP trackers only!")
+            panic!("Unexpected scrape scheme!")
+        }
+        if i.url.host_str().unwrap().ends_with(".i2p") {
+            todo!("I2P scrape source yet not supported!")
         }
         info!(
-            "init full-scrape source {}, proxy: {:?}",
+            "init full-scrape HTTP source {}, proxy: {:?}",
             i.url, i.proxy_url
         );
         scrape.push(FullScrape {
@@ -77,9 +80,10 @@ async fn main() -> Result<()> {
 
     let full_scrape = full_scrape::Buffer(scrape);
 
-    // init trackers (for DHT data preload)
+    // init announce trackers (resolves librqbit peers with custom logic)
     let mut trackers = Vec::with_capacity(
-        config.tracker.announce.len()
+        config.tracker.announce_http.len()
+            + config.tracker.announce_udp.len()
             + config
                 .tracker
                 .announce_i2p
@@ -87,19 +91,36 @@ async fn main() -> Result<()> {
                 .map(|a| a.len())
                 .unwrap_or_default(),
     );
-
-    for i in config.tracker.announce {
+    for i in config.tracker.announce_http {
         if !i.url.scheme().starts_with("http") {
-            todo!("HTTP trackers only!")
+            panic!("Unexpected scrape scheme!")
         }
-        info!("init tracker {}, proxy: {:?}", i.url, i.proxy_url);
-        trackers.push(Tracker::Default {
+        if i.url.host_str().unwrap().ends_with(".i2p") {
+            todo!("I2P scrape source yet not supported!")
+        }
+        info!(
+            "init HTTP announce tracker {} with client port {}, proxy: {:?}",
+            i.url, i.announce_port, i.proxy_url
+        );
+        trackers.push(Tracker::Http {
             headers: i.headers,
             peers_limit: i.peers_limit,
-            port: i.port,
+            announce_port: i.announce_port,
             proxy: i.proxy_url,
             timeout: Duration::from_secs(i.timeout),
             url: i.url,
+        })
+    }
+    for i in config.tracker.announce_udp {
+        info!(
+            "init UDP announce tracker {} with client port {}",
+            i.socket, i.announce_port
+        );
+        trackers.push(Tracker::Udp {
+            announce_port: i.announce_port,
+            peers_limit: i.peers_limit,
+            server: udp::server_for_socket(&i.socket, i.timeout)?,
+            socket: i.socket,
         })
     }
 
@@ -122,7 +143,7 @@ async fn main() -> Result<()> {
                     config.timeout.i2p_peer_connect_timeout_seconds,
                 ),
                 url: i.url,
-                port: i.port,
+                announce_port: i.announce_port,
                 peers_limit: i.peers_limit,
                 sam_session: Arc::new(RwLock::new(
                     Session::new(SessionOptions {
@@ -248,7 +269,7 @@ async fn main() -> Result<()> {
                     }
                 }
                 Err(e) => {
-                    warn!("could not get peers for torrent {h}: {e}, skip.");
+                    debug!("could not get active peers for torrent {h}: {e}, skip.");
                     continue;
                 }
             };
@@ -296,6 +317,21 @@ async fn main() -> Result<()> {
                         mt.wait_until_initialized().await?;
                         let bytes = mt.with_metadata(|m| {
                                 for (id, info) in m.file_infos.iter().enumerate() {
+                                    if preload.regex.as_ref().is_some_and(|r| {
+                                        !r.is_match(&info.relative_filename.to_string_lossy())
+                                    }) {
+                                        debug!("regex filter match: skip {id} for {h} at {}",
+                                        info.relative_filename.to_string_lossy());
+                                        continue;
+                                    }
+                                    if preload.max_filesize.is_some_and(|limit| info.len > limit) {
+                                        debug!(
+                                            "file size ({}) limit reached, skip file {id} for {h} at {}",
+                                            info.len,
+                                            info.relative_filename.to_string_lossy()
+                                        );
+                                        continue;
+                                    }
                                     if preload
                                         .max_filecount
                                         .is_some_and(|limit| only_files.len() + 1 > limit)
@@ -306,21 +342,6 @@ async fn main() -> Result<()> {
                                             info.relative_filename.to_string_lossy()
                                         );
                                         break;
-                                    }
-                                    if preload.max_filesize.is_some_and(|limit| info.len > limit) {
-                                        debug!(
-                                            "file size ({}) limit reached, skip file {id} for {h} at {}",
-                                            info.len,
-                                            info.relative_filename.to_string_lossy()
-                                        );
-                                        continue;
-                                    }
-                                    if preload.regex.as_ref().is_some_and(|r| {
-                                        !r.is_match(&info.relative_filename.to_string_lossy())
-                                    }) {
-                                        debug!("regex filter match: skip {id} for {h} at {}",
-                                        info.relative_filename.to_string_lossy());
-                                        continue;
                                     }
                                     debug!(
                                         "keep file {id} for {h} as {}",
@@ -340,8 +361,11 @@ async fn main() -> Result<()> {
                         )
                         .await
                         {
-                            debug!("preload torrent data for {h} failed ({e}), ban temporarily.");
-                            assert!(ban.insert(i));
+                            // No ban here because heavy torrents get repeating in queue and overload the CPU without any chance to success
+                            // Find a way to handle torrents with slow peers or large amounts of data.
+                            // This solution works even if we lose the preview content; it only drops a warning (@TODO reminder)
+                            warn!("preload torrent data for {h} failed ({e}), save metadata only.");
+                            preload.commit(&h, bytes, None)?;
                             continue;
                         }
                         debug!("torrent {h} preload completed.");

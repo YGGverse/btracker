@@ -30,7 +30,7 @@ impl Buffer {
                 Ok(result) => result,
                 Err(e) => {
                     warn!(
-                        "[full-scrape] full-scrape {} update failed: {e}; skip",
+                        "[full-scrape] full-scrape `{}` update failed: {e}; skip",
                         this.query
                     );
                     continue; // skip without panic

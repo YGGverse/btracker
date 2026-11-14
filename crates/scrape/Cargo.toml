@@ -10,6 +10,6 @@ categories = ["network-programming"]
 repository = "https://github.com/YGGverse/btracker"
 
 [dependencies]
-anyhow = "1.0.95"
+anyhow = "1.0.104"
 btpeer = "0.13.3"
-url = "2.5.7"
+url = "2.5.8"

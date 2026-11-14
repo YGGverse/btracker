@@ -1,6 +1,6 @@
 # btracker-crawler
 
-[![Dependencies](https://deps.rs/repo/github/YGGverse/btracker-crawler/status.svg)](https://deps.rs/repo/github/YGGverse/btracker-crawler)
+[![dependency status](https://deps.rs/repo/github/yggverse/btracker/status.svg?path=crates%2Fcrawler)](https://deps.rs/repo/github/yggverse/btracker?path=crates%2Fcrawler)
 [![crates.io](https://img.shields.io/crates/v/btracker-crawler.svg)](https://crates.io/crates/btracker-crawler)
 
 SSD-friendly FS crawler of BEP 48 / Full Scrape, based on [librqbit](https://github.com/ikatson/rqbit/tree/main/crates/librqbit)

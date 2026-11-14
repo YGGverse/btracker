@@ -2,20 +2,16 @@ use serde::Deserialize;
 use serde_inline_default::serde_inline_default;
 use url::Url;
 
+#[serde_inline_default]
+#[derive(Deserialize)]
 /// Info-hash source
 /// * tip: by using OpenTracker,
 ///    make sure `FEATURES+=-DWANT_FULLSCRAPE` is enabled!
-#[serde_inline_default]
-#[derive(Deserialize)]
-pub struct Scrape {
+pub struct Http {
     /// URL to the BEP 48 / Full Scrape
     ///
     /// * supports HTTP trackers only
     pub url: Url,
-
-    /// How long to wait for tracker full scrape response
-    #[serde_inline_default(5)]
-    pub timeout: u64,
 
     /// Use HTTP(s) proxy, e.g. `http://127.0.0.1:9050` or `http://127.0.0.1:4444` for I2P
     pub proxy_url: Option<Url>,
@@ -23,4 +19,8 @@ pub struct Scrape {
     /// Custom HTTP tracker headers
     #[serde_inline_default(Vec::new())]
     pub headers: Vec<String>,
+
+    /// How long to wait for tracker full scrape response
+    #[serde_inline_default(5)]
+    pub timeout: u64,
 }
