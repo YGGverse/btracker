@@ -69,9 +69,9 @@ impl Tracker {
 
                 // this could be an issue as people can't publish their peering announces
                 // and request seeds from the btracker-http catalog as feature @TODO think about
-                if result.complete == 0 && result.incomplete == 0 {
+                if result.complete == 0 {
                     bail!(
-                        "{} peer(s) but no active seeds or leechers for {}",
+                        "{} peer(s) but no active seeds for {}",
                         result.peers.0.len(),
                         info_hash.as_string()
                     )
@@ -108,9 +108,9 @@ impl Tracker {
 
                 // this could be an issue as people can't publish their peering announces
                 // and request seeds from the btracker-http catalog as feature @TODO think about
-                if result.seeders == 0 && result.leechers == 0 {
+                if result.seeders == 0 {
                     bail!(
-                        "{} peer(s) but no active seeds or leechers for {}",
+                        "{} peer(s) but no active seeds for {}",
                         result.peers.0.len(),
                         info_hash.as_string()
                     )
@@ -156,9 +156,9 @@ impl Tracker {
 
                 // this could be an issue as people can't publish their peering announces
                 // and request seeds from the btracker-http catalog as feature @TODO think about
-                if result.complete == 0 && result.incomplete == 0 {
+                if result.complete == 0 {
                     bail!(
-                        "{} peer(s) but no active seeds or leechers for {}",
+                        "{} peer(s) but no active seeds for {}",
                         result.peers.0.len(),
                         info_hash.as_string()
                     )
