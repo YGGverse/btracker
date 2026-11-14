@@ -1,15 +1,12 @@
-//! Info-hash source
-//! * tip: by using OpenTracker,
-//!    make sure `FEATURES+=-DWANT_FULLSCRAPE` is enabled!
-
-use std::net::SocketAddr;
-
 use serde::Deserialize;
 use serde_inline_default::serde_inline_default;
 use url::Url;
 
 #[serde_inline_default]
 #[derive(Deserialize)]
+/// Info-hash source
+/// * tip: by using OpenTracker,
+///    make sure `FEATURES+=-DWANT_FULLSCRAPE` is enabled!
 pub struct Http {
     /// URL to the BEP 48 / Full Scrape
     ///
@@ -22,16 +19,6 @@ pub struct Http {
     /// Custom HTTP tracker headers
     #[serde_inline_default(Vec::new())]
     pub headers: Vec<String>,
-
-    /// How long to wait for tracker full scrape response
-    #[serde_inline_default(5)]
-    pub timeout: u64,
-}
-
-#[serde_inline_default]
-#[derive(Deserialize)]
-pub struct Udp {
-    pub socket: SocketAddr,
 
     /// How long to wait for tracker full scrape response
     #[serde_inline_default(5)]

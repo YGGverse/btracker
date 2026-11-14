@@ -58,9 +58,8 @@ async fn main() -> Result<()> {
     .unwrap();
 
     // init info-hash sources
-    let mut scrape =
-        Vec::with_capacity(config.tracker.scrape_http.len() + config.tracker.scrape_udp.len());
-    for i in config.tracker.scrape_http {
+    let mut scrape = Vec::with_capacity(config.tracker.scrape.len());
+    for i in config.tracker.scrape {
         if !i.url.scheme().starts_with("http") {
             panic!("Unexpected scrape scheme!")
         }
@@ -71,18 +70,11 @@ async fn main() -> Result<()> {
             "init full-scrape HTTP source {}, proxy: {:?}",
             i.url, i.proxy_url
         );
-        scrape.push(FullScrape::Http {
+        scrape.push(FullScrape {
             proxy: i.proxy_url,
             query: Scrape::new(i.url.as_str(), None)?,
             timeout: Duration::from_secs(i.timeout),
             headers: i.headers,
-        })
-    }
-    for i in config.tracker.scrape_udp {
-        info!("init full-scrape UDP source {}", i.socket);
-        scrape.push(FullScrape::Udp {
-            server: udp::server_for_socket(&i.socket, i.timeout)?,
-            socket: i.socket,
         })
     }
 
